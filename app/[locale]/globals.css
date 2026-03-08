@@ -175,6 +175,16 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 50;
+  transition: width 0.3s ease;
+}
+
+.sidebar.collapsed {
+  width: 80px;
+}
+
+.sidebar.collapsed .sidebar-title,
+.sidebar.collapsed .sidebar-link span {
+  display: none;
 }
 
 .sidebar-logo {
@@ -183,12 +193,14 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  transition: justify-content 0.3s ease;
 }
 
 .sidebar-logo h1 {
   font-size: 18px;
   font-weight: 700;
   background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+  background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -229,6 +241,11 @@ body {
   margin-left: 260px;
   padding: 32px;
   min-height: 100vh;
+  transition: margin-left 0.3s ease;
+}
+
+body:has(.sidebar.collapsed) .main-content {
+  margin-left: 80px;
 }
 
 .page-header {

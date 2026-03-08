@@ -39,7 +39,10 @@
     "uploadGallup": "Upload Gallup Report",
     "processing": "Processing report...",
     "success": "Report processed successfully",
-    "error": "Failed to process report"
+    "error": "Failed to process report",
+    "import": "Import",
+    "importSuccess": "Import successful",
+    "importError": "Failed to import - please check the CSV format (expected columns: name, email, role)"
   },
   "Talents": {
     "matrix": "Team Talent Matrix",
@@ -48,7 +51,8 @@
     "heatmap": "Talent Heatmap",
     "top5": "Top 5 Talents",
     "top10": "Top 10 Talents",
-    "teamRow": "Team",
+    "top10Summary": "Top 10 Summary",
+    "teamRow": "Team's Rank",
     "teamRank": "Team Rank"
   }
 }

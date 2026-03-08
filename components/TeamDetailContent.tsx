@@ -15,6 +15,7 @@ import {
     Tooltip,
 } from 'recharts';
 import { Link } from '@/i18n/routing';
+import Papa from 'papaparse';
 
 interface TalentResult {
     id: string; rank: number; talent: string; domain: string;
@@ -36,6 +37,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const locale = useLocale();
     const { apiFetch, apiUpload } = useApi();
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const csvInputRef = useRef<HTMLInputElement>(null);
 
     const [team, setTeam] = useState<TeamData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -96,9 +98,65 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         fileInputRef.current?.click();
     };
 
+    const triggerCsvImport = () => {
+        csvInputRef.current?.click();
+    };
+
+    const handleCsvImport = async (data: any[]) => {
+        if (!data || data.length === 0) return;
+        setUploadStatus(t('processing'));
+        try {
+            const members = data.map((row: any) => ({
+                name: row.name,
+                email: row.email,
+                role: row.role,
+                teamId
+            })).filter(m => m.name);
+
+            if (members.length === 0) {
+                setUploadStatus(t('importError'));
+                setTimeout(() => setUploadStatus(null), 3000);
+                return;
+            }
+
+            const res = await apiFetch('/api/members', {
+                method: 'POST',
+                body: JSON.stringify(members)
+            });
+
+            if (res.ok) {
+                setUploadStatus(t('importSuccess'));
+                fetchTeam();
+            } else {
+                setUploadStatus(t('importError'));
+            }
+        } catch {
+            setUploadStatus(t('importError'));
+        }
+        setTimeout(() => setUploadStatus(null), 3000);
+    };
+
     const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file && uploadingFor) handleUpload(uploadingFor, file);
+        e.target.value = '';
+    };
+
+    const onCsvSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => {
+                handleCsvImport(results.data);
+            },
+            error: () => {
+                setUploadStatus(t('importError'));
+                setTimeout(() => setUploadStatus(null), 3000);
+            }
+        });
         e.target.value = '';
     };
 
@@ -164,6 +222,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     return (
         <div>
             <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={onFileSelect} />
+            <input ref={csvInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={onCsvSelect} />
 
             <div className="page-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -175,9 +234,14 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                         <p className="page-subtitle">{team.organization.name} · {team.members.length} members</p>
                     </div>
                 </div>
-                <button className="btn btn-primary" onClick={() => setShowAddMember(true)}>
-                    <UserPlus size={18} /> {t('add')}
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-ghost" onClick={triggerCsvImport}>
+                        <Upload size={18} /> {t('import')}
+                    </button>
+                    <button className="btn btn-primary" onClick={() => setShowAddMember(true)}>
+                        <UserPlus size={18} /> {t('add')}
+                    </button>
+                </div>
             </div>
 
             {/* Tab navigation */}
@@ -241,15 +305,20 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                                     const rank = rankMap[talent.code];
                                                     if (!rank) return <td key={talent.code} style={{ textAlign: 'center' }}>-</td>;
 
-                                                    const bg = `${DOMAIN_COLORS[talent.domain]}${rank <= 10 ? 'ff' : rank <= 29 ? '33' : '11'}`;
+                                                    const bg = rank >= 30
+                                                        ? 'var(--text-secondary)'
+                                                        : `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? 'bb' : '33'}`;
+                                                    const textColor = rank >= 30
+                                                        ? 'var(--bg-primary)'
+                                                        : rank <= 10 ? '#fff' : 'var(--text-primary)';
 
                                                     return (
                                                         <td key={talent.code} style={{ textAlign: 'center', padding: '4px 2px' }}>
                                                             <div className="talent-cell" style={{
                                                                 background: bg,
-                                                                color: rank <= 10 ? '#fff' : 'var(--text-primary)',
+                                                                color: textColor,
                                                                 margin: '0 auto',
-                                                                fontWeight: rank <= 10 ? 700 : 500,
+                                                                fontWeight: rank <= 10 || rank >= 30 ? 700 : 500,
                                                             }}>
                                                                 {rank}
                                                             </div>
@@ -259,6 +328,12 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             </tr>
                                         );
                                     })}
+                                    {/* Spacer row */}
+                                    {teamRanks.length > 0 && (
+                                        <tr>
+                                            <td colSpan={35} style={{ height: '32px', background: 'transparent', border: 'none' }}></td>
+                                        </tr>
+                                    )}
                                     {/* Team row: team-level talent ranking */}
                                     {teamRanks.length > 0 && (
                                         <tr style={{ borderTop: '2px solid var(--border-accent)' }}>
@@ -272,15 +347,20 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                                 const rank = teamRankMap[talent.code];
                                                 if (!rank) return <td key={talent.code} style={{ textAlign: 'center' }}>-</td>;
 
-                                                const bg = `${DOMAIN_COLORS[talent.domain]}${rank <= 10 ? 'ff' : rank <= 29 ? '33' : '11'}`;
+                                                const bg = rank >= 30
+                                                    ? 'var(--text-secondary)'
+                                                    : `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? 'bb' : '33'}`;
+                                                const textColor = rank >= 30
+                                                    ? 'var(--bg-primary)'
+                                                    : rank <= 10 ? '#fff' : 'var(--text-primary)';
 
                                                 return (
                                                     <td key={talent.code} style={{ textAlign: 'center', padding: '4px 2px' }}>
                                                         <div className="talent-cell" style={{
                                                             background: bg,
-                                                            color: rank <= 10 ? '#fff' : 'var(--text-primary)',
+                                                            color: textColor,
                                                             margin: '0 auto',
-                                                            fontWeight: rank <= 10 ? 700 : 500,
+                                                            fontWeight: rank <= 10 || rank >= 30 ? 700 : 500,
                                                         }}>
                                                             {rank}
                                                         </div>
@@ -295,7 +375,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             position: 'sticky', left: 0, background: 'var(--bg-card)',
                                             zIndex: 1, fontWeight: 700, fontSize: 11, textTransform: 'uppercase',
                                         }}>
-                                            {tt('top10')} Summary
+                                            {tt('top10Summary')}
                                         </td>
                                         {GALLUP_TALENTS.map(talent => {
                                             const count = talentTop10Counts[talent.code] || 0;

@@ -39,7 +39,10 @@
         "uploadGallup": "Wgraj raport Gallupa",
         "processing": "Przetwarzanie raportu...",
         "success": "Raport przetworzony pomyślnie",
-        "error": "Błąd podczas przetwarzania raportu"
+        "error": "Błąd podczas przetwarzania raportu",
+        "import": "Importuj",
+        "importSuccess": "Zaimportowano pomyślnie",
+        "importError": "Błąd programu podczas importu - sprawdź format csv (oczekiwane kolumny: name, email, role)"
     },
     "Talents": {
         "matrix": "Matryca talentów zespołu",
@@ -48,6 +51,7 @@
         "heatmap": "Heatmapa talentów",
         "top5": "TOP 5 talentów",
         "top10": "TOP 10 talentów",
+        "top10Summary": "Top 10",
         "teamRow": "Zespół",
         "teamRank": "Ranga zespołu"
     }

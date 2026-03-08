@@ -1,6 +1,7 @@
 'use client';
 
 import { useTranslations, useLocale } from 'next-intl';
+import { useState } from 'react';
 import { Link, usePathname } from '@/i18n/routing';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -9,9 +10,12 @@ import {
     Users,
     LogOut,
     Sparkles,
+    ChevronLeft,
+    ChevronRight,
 } from 'lucide-react';
 
 export default function Sidebar() {
+    const [collapsed, setCollapsed] = useState(false);
     const t = useTranslations('Common');
     const { logout } = useAuth();
     const pathname = usePathname();
@@ -26,10 +30,18 @@ export default function Sidebar() {
     const isActive = (href: string) => href === '/' ? pathname === `/${locale}` : pathname.includes(href);
 
     return (
-        <aside className="sidebar">
-            <div className="sidebar-logo">
-                <Sparkles size={24} style={{ color: 'var(--accent-secondary)' }} />
-                <h1>{t('title')}</h1>
+        <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+            <div className="sidebar-logo" style={{ justifyContent: collapsed ? 'center' : 'space-between', padding: collapsed ? '24px 12px' : '24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Sparkles size={24} style={{ color: 'var(--accent-secondary)' }} />
+                    <h1 className="sidebar-title">{t('title')}</h1>
+                </div>
+                <button
+                    onClick={() => setCollapsed(!collapsed)}
+                    className="sidebar-toggle" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                >
+                    {collapsed ? null : <ChevronLeft size={20} />}
+                </button>
             </div>
 
             <nav className="sidebar-nav">
@@ -45,8 +57,8 @@ export default function Sidebar() {
                 ))}
             </nav>
 
-            <div style={{ padding: '16px 12px', borderTop: '1px solid var(--border-color)' }}>
-                <div className="lang-switcher" style={{ marginBottom: 12 }}>
+            <div style={{ padding: collapsed ? '16px 8px' : '16px 12px', borderTop: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: collapsed ? 'center' : 'stretch' }}>
+                <div className="lang-switcher" style={{ marginBottom: 12, flexDirection: collapsed ? 'column' : 'row' }}>
                     <Link href={pathname as any} locale="en">
                         <button className={locale === 'en' ? 'active' : ''}>EN</button>
                     </Link>
@@ -55,7 +67,13 @@ export default function Sidebar() {
                     </Link>
                 </div>
 
-                <button className="sidebar-link" onClick={logout} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', textAlign: 'left' }}>
+                {collapsed && (
+                    <button onClick={() => setCollapsed(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 16 }}>
+                        <ChevronRight size={20} />
+                    </button>
+                )}
+
+                <button className="sidebar-link" onClick={logout} style={{ width: '100%', border: 'none', background: 'none', cursor: 'pointer', justifyContent: collapsed ? 'center' : 'flex-start' }}>
                     <LogOut size={20} />
                     <span>{t('logout')}</span>
                 </button>
