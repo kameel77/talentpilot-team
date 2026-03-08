@@ -241,17 +241,15 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                                     const rank = rankMap[talent.code];
                                                     if (!rank) return <td key={talent.code} style={{ textAlign: 'center' }}>-</td>;
 
-                                                    const opacity = rank <= 5 ? 1 : rank <= 10 ? 0.7 : rank <= 20 ? 0.4 : 0.15;
-                                                    const bg = `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? '88' : rank <= 20 ? '33' : '11'}`;
+                                                    const bg = `${DOMAIN_COLORS[talent.domain]}${rank <= 10 ? 'ff' : rank <= 29 ? '33' : '11'}`;
 
                                                     return (
                                                         <td key={talent.code} style={{ textAlign: 'center', padding: '4px 2px' }}>
                                                             <div className="talent-cell" style={{
                                                                 background: bg,
-                                                                color: rank <= 10 ? '#fff' : 'var(--text-secondary)',
-                                                                opacity,
+                                                                color: rank <= 10 ? '#fff' : 'var(--text-primary)',
                                                                 margin: '0 auto',
-                                                                fontWeight: rank <= 5 ? 700 : 400,
+                                                                fontWeight: rank <= 10 ? 700 : 500,
                                                             }}>
                                                                 {rank}
                                                             </div>
@@ -274,17 +272,15 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                                 const rank = teamRankMap[talent.code];
                                                 if (!rank) return <td key={talent.code} style={{ textAlign: 'center' }}>-</td>;
 
-                                                const opacity = rank <= 5 ? 1 : rank <= 10 ? 0.7 : rank <= 20 ? 0.4 : 0.15;
-                                                const bg = `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? '88' : rank <= 20 ? '33' : '11'}`;
+                                                const bg = `${DOMAIN_COLORS[talent.domain]}${rank <= 10 ? 'ff' : rank <= 29 ? '33' : '11'}`;
 
                                                 return (
                                                     <td key={talent.code} style={{ textAlign: 'center', padding: '4px 2px' }}>
                                                         <div className="talent-cell" style={{
                                                             background: bg,
-                                                            color: rank <= 10 ? '#fff' : 'var(--text-secondary)',
-                                                            opacity,
+                                                            color: rank <= 10 ? '#fff' : 'var(--text-primary)',
                                                             margin: '0 auto',
-                                                            fontWeight: rank <= 5 ? 700 : 400,
+                                                            fontWeight: rank <= 10 ? 700 : 500,
                                                         }}>
                                                             {rank}
                                                         </div>

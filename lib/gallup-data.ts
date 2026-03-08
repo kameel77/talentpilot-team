@@ -13,10 +13,10 @@ export interface GallupTalent {
 }
 
 export const DOMAIN_COLORS: Record<GallupDomain, string> = {
-    executing: '#7B2D8E',          // Purple
-    influencing: '#E8A317',        // Orange/Gold
-    relationship_building: '#2E86AB', // Blue
-    strategic_thinking: '#A23B72',  // Red/Magenta
+    executing: '#6B33CC',
+    influencing: '#F97415',
+    relationship_building: '#1FAD91',
+    strategic_thinking: '#1A80E6',
 };
 
 export const DOMAIN_LABELS: Record<GallupDomain, { en: string; pl: string }> = {

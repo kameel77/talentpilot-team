@@ -19,6 +19,8 @@ type LayoutProps = {
   params: Promise<{ locale: string }>;
 };
 
+import { ThemeProvider } from "@/components/ThemeProvider";
+
 export default async function LocaleLayout({ children, params }: LayoutProps) {
   const { locale } = await params;
 
@@ -29,11 +31,13 @@ export default async function LocaleLayout({ children, params }: LayoutProps) {
   const messages = await getMessages();
 
   return (
-    <html lang={locale} className="dark">
+    <html lang={locale} suppressHydrationWarning>
       <body className={`${geist.variable} ${geistMono.variable} antialiased`}>
-        <NextIntlClientProvider messages={messages}>
-          {children}
-        </NextIntlClientProvider>
+        <ThemeProvider>
+          <NextIntlClientProvider messages={messages}>
+            {children}
+          </NextIntlClientProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
