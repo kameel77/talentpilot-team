@@ -15,8 +15,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!user) return unauthorized();
     const { id } = await params;
 
-    const TALENTPILOT_API_URL = process.env.TALENTPILOT_API_URL;
-    const TALENTPILOT_API_KEY = process.env.TALENTPILOT_API_KEY;
+    // Strip quotes from env vars (Coolify may wrap values in quotes)
+    const TALENTPILOT_API_URL = (process.env.TALENTPILOT_API_URL || '').replace(/^["']|["']$/g, '');
+    const TALENTPILOT_API_KEY = (process.env.TALENTPILOT_API_KEY || '').replace(/^["']|["']$/g, '');
 
     if (!TALENTPILOT_API_URL || !TALENTPILOT_API_KEY) {
         return NextResponse.json(
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest, { params }: Params) {
         apiFormData.append('file', file);
 
         const apiUrl = `${TALENTPILOT_API_URL.replace(/\/$/, '')}/api/external/v1/gallup/parse?language=pl%2Ben`;
+        console.log('[Gallup Upload] Calling TalentPilot API:', apiUrl);
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -58,11 +60,13 @@ export async function POST(req: NextRequest, { params }: Params) {
 
         if (!response.ok) {
             const errorText = await response.text();
+            console.error('[Gallup Upload] API error:', response.status, errorText);
             return NextResponse.json(
-                { error: `TalentPilot API error: ${response.status}`, detail: errorText },
+                { error: `TalentPilot API error: ${response.status}`, detail: errorText, url: apiUrl },
                 { status: response.status }
             );
         }
+
 
         const data = await response.json();
         const talents = data.talents || [];
