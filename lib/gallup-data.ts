@@ -44,7 +44,7 @@ export const GALLUP_TALENTS: GallupTalent[] = [
     { code: 'communication', en: 'Communication', pl: 'Komunikatywność', domain: 'influencing' },
     { code: 'competition', en: 'Competition', pl: 'Rywalizacja', domain: 'influencing' },
     { code: 'maximizer', en: 'Maximizer', pl: 'Maksymalista', domain: 'influencing' },
-    { code: 'self_assurance', en: 'Self-Assurance', pl: 'Wiara w siebie', domain: 'influencing' },
+    { code: 'self-assurance', en: 'Self-Assurance', pl: 'Wiara w siebie', domain: 'influencing' },
     { code: 'significance', en: 'Significance', pl: 'Poważanie', domain: 'influencing' },
     { code: 'woo', en: 'Woo', pl: 'Czar', domain: 'influencing' },
 
