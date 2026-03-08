@@ -47,6 +47,8 @@
         "domains": "Rozkład domen",
         "heatmap": "Heatmapa talentów",
         "top5": "TOP 5 talentów",
-        "top10": "TOP 10 talentów"
+        "top10": "TOP 10 talentów",
+        "teamRow": "Zespół",
+        "teamRank": "Ranga zespołu"
     }
 }

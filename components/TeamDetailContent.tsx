@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useApi } from '@/lib/auth-context';
 import { GALLUP_TALENTS, DOMAIN_COLORS, DOMAIN_LABELS, type GallupDomain } from '@/lib/gallup-data';
+import { teamTalentRanks, dominantDomain } from '@/lib/team-algorithms';
 import {
     Plus, Upload, ArrowLeft, Trash2, UserPlus, X,
     BarChart3, Grid3x3, PieChart,
@@ -106,16 +107,29 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
 
     const membersWithResults = team.members.filter(m => m.results.length > 0);
 
-    // Domain distribution data
+    // Build rank maps for team algorithm
+    const talentCodes = GALLUP_TALENTS.map(t => t.code);
+    const membersRankMaps = membersWithResults.map(m => {
+        const map: Record<string, number> = {};
+        m.results.forEach(r => { map[r.talent] = r.rank; });
+        return map;
+    });
+
+    // Compute team talent rankings (geometric mean)
+    const teamRanks = teamTalentRanks(membersRankMaps, talentCodes);
+    const teamRankMap: Record<string, number> = {};
+    teamRanks.forEach(tr => { teamRankMap[tr.talent] = tr.teamRank; });
+
+    // Domain distribution based on team talent order's Top 5
+    const teamTop5 = teamRanks.filter(tr => tr.teamRank <= 5);
     const domainCounts: Record<GallupDomain, number> = {
         executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
     };
-    membersWithResults.forEach(m => {
-        const top5 = m.results.filter(r => r.rank <= 5);
-        top5.forEach(r => {
-            const d = r.domain as GallupDomain;
-            if (domainCounts[d] !== undefined) domainCounts[d]++;
-        });
+    teamTop5.forEach(tr => {
+        const talent = GALLUP_TALENTS.find(t => t.code === tr.talent);
+        if (talent) {
+            domainCounts[talent.domain]++;
+        }
     });
     const domainData = (Object.entries(domainCounts) as [GallupDomain, number][]).map(([domain, count]) => ({
         name: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
@@ -247,6 +261,38 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             </tr>
                                         );
                                     })}
+                                    {/* Team row: team-level talent ranking */}
+                                    {teamRanks.length > 0 && (
+                                        <tr style={{ borderTop: '2px solid var(--border-accent)' }}>
+                                            <td style={{
+                                                position: 'sticky', left: 0, background: 'var(--bg-card)',
+                                                zIndex: 1, fontWeight: 700, whiteSpace: 'nowrap',
+                                            }}>
+                                                {tt('teamRow')}
+                                            </td>
+                                            {GALLUP_TALENTS.map(talent => {
+                                                const rank = teamRankMap[talent.code];
+                                                if (!rank) return <td key={talent.code} style={{ textAlign: 'center' }}>-</td>;
+
+                                                const opacity = rank <= 5 ? 1 : rank <= 10 ? 0.7 : rank <= 20 ? 0.4 : 0.15;
+                                                const bg = `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? '88' : rank <= 20 ? '33' : '11'}`;
+
+                                                return (
+                                                    <td key={talent.code} style={{ textAlign: 'center', padding: '4px 2px' }}>
+                                                        <div className="talent-cell" style={{
+                                                            background: bg,
+                                                            color: rank <= 10 ? '#fff' : 'var(--text-secondary)',
+                                                            opacity,
+                                                            margin: '0 auto',
+                                                            fontWeight: rank <= 5 ? 700 : 400,
+                                                        }}>
+                                                            {rank}
+                                                        </div>
+                                                    </td>
+                                                );
+                                            })}
+                                        </tr>
+                                    )}
                                     {/* Summary row: Top 10 counts */}
                                     <tr style={{ borderTop: '2px solid var(--border-accent)' }}>
                                         <td style={{

@@ -47,6 +47,8 @@
     "domains": "Domain Distribution",
     "heatmap": "Talent Heatmap",
     "top5": "Top 5 Talents",
-    "top10": "Top 10 Talents"
+    "top10": "Top 10 Talents",
+    "teamRow": "Team",
+    "teamRank": "Team Rank"
   }
 }
