@@ -349,27 +349,27 @@ body:has(.sidebar.collapsed) .main-content {
 }
 
 .domain-badge.executing {
-  background: rgba(123, 45, 142, 0.15);
-  color: #b366cc;
-  border: 1px solid rgba(123, 45, 142, 0.3);
+  background: color-mix(in srgb, var(--domain-executing) 15%, transparent);
+  color: var(--domain-executing);
+  border: 1px solid color-mix(in srgb, var(--domain-executing) 30%, transparent);
 }
 
 .domain-badge.influencing {
-  background: rgba(232, 163, 23, 0.15);
-  color: #f0c040;
-  border: 1px solid rgba(232, 163, 23, 0.3);
+  background: color-mix(in srgb, var(--domain-influencing) 15%, transparent);
+  color: var(--domain-influencing);
+  border: 1px solid color-mix(in srgb, var(--domain-influencing) 30%, transparent);
 }
 
 .domain-badge.relationship_building {
-  background: rgba(46, 134, 171, 0.15);
-  color: #5ab8d8;
-  border: 1px solid rgba(46, 134, 171, 0.3);
+  background: color-mix(in srgb, var(--domain-relationship) 15%, transparent);
+  color: var(--domain-relationship);
+  border: 1px solid color-mix(in srgb, var(--domain-relationship) 30%, transparent);
 }
 
 .domain-badge.strategic_thinking {
-  background: rgba(162, 59, 114, 0.15);
-  color: #d06090;
-  border: 1px solid rgba(162, 59, 114, 0.3);
+  background: color-mix(in srgb, var(--domain-strategic) 15%, transparent);
+  color: var(--domain-strategic);
+  border: 1px solid color-mix(in srgb, var(--domain-strategic) 30%, transparent);
 }
 
 /* ===== Modal ===== */

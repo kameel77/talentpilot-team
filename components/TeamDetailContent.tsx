@@ -7,7 +7,7 @@ import { GALLUP_TALENTS, DOMAIN_COLORS, DOMAIN_LABELS, type GallupDomain } from 
 import { teamTalentRanks, dominantDomain } from '@/lib/team-algorithms';
 import {
     Plus, Upload, ArrowLeft, Trash2, UserPlus, X,
-    BarChart3, Grid3x3, PieChart,
+    BarChart3, Grid3x3, PieChart, Edit2, Check
 } from 'lucide-react';
 import {
     PieChart as RePieChart, Pie, Cell, ResponsiveContainer,
@@ -46,6 +46,8 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [uploadingFor, setUploadingFor] = useState<string | null>(null);
     const [uploadStatus, setUploadStatus] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains' | 'profiles'>('matrix');
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [editNameValue, setEditNameValue] = useState('');
 
     const fetchTeam = useCallback(async () => {
         const res = await apiFetch(`/api/teams/${teamId}`);
@@ -134,6 +136,19 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             setUploadStatus(t('importError'));
         }
         setTimeout(() => setUploadStatus(null), 3000);
+    };
+
+    const handleSaveName = async () => {
+        if (!editNameValue.trim() || editNameValue === team?.name) {
+            setIsEditingName(false);
+            return;
+        }
+        await apiFetch(`/api/teams/${teamId}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name: editNameValue })
+        });
+        setIsEditingName(false);
+        fetchTeam();
     };
 
     const onFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -230,7 +245,33 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                         <ArrowLeft size={20} />
                     </Link>
                     <div>
-                        <h1 className="page-title">{team.name}</h1>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            {isEditingName ? (
+                                <>
+                                    <input
+                                        autoFocus
+                                        className="input"
+                                        style={{ fontSize: 24, fontWeight: 700, padding: '4px 8px', height: 'auto', width: 'auto' }}
+                                        value={editNameValue}
+                                        onChange={e => setEditNameValue(e.target.value)}
+                                        onKeyDown={e => e.key === 'Enter' && handleSaveName()}
+                                    />
+                                    <button className="btn btn-ghost" style={{ padding: 8 }} onClick={handleSaveName}>
+                                        <Check size={18} />
+                                    </button>
+                                    <button className="btn btn-ghost" style={{ padding: 8 }} onClick={() => setIsEditingName(false)}>
+                                        <X size={18} />
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <h1 className="page-title">{team.name}</h1>
+                                    <button className="btn btn-ghost" style={{ padding: 6, border: 'none' }} onClick={() => { setEditNameValue(team.name); setIsEditingName(true); }}>
+                                        <Edit2 size={16} />
+                                    </button>
+                                </>
+                            )}
+                        </div>
                         <p className="page-subtitle">{team.organization.name} · {team.members.length} members</p>
                     </div>
                 </div>
