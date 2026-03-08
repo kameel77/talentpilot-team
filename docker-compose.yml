@@ -1,0 +1,36 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://talentpilot:talentpilot@db:5432/talentpilot_team
+      - JWT_SECRET=${JWT_SECRET}
+      - TALENTPILOT_API_URL=${TALENTPILOT_API_URL}
+      - TALENTPILOT_API_KEY=${TALENTPILOT_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=talentpilot
+      - POSTGRES_PASSWORD=talentpilot
+      - POSTGRES_DB=talentpilot_team
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U talentpilot -d talentpilot_team" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:

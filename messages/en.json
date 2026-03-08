@@ -1,0 +1,52 @@
+{
+  "Common": {
+    "title": "Talent Navigator",
+    "dashboard": "Dashboard",
+    "teams": "Teams",
+    "organizations": "Organizations",
+    "settings": "Settings",
+    "logout": "Logout",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "actions": "Actions"
+  },
+  "Auth": {
+    "login": "Login",
+    "password": "Password",
+    "submit": "Submit",
+    "error": "Invalid credentials"
+  },
+  "Org": {
+    "add": "Add Organization",
+    "name": "Organization Name",
+    "address": "Address",
+    "nip": "NIP",
+    "email": "Email Address",
+    "noOrgs": "No organizations found"
+  },
+  "Team": {
+    "add": "Add Team",
+    "name": "Team Name",
+    "noTeams": "No teams found"
+  },
+  "Member": {
+    "add": "Add Team Member",
+    "name": "Full Name",
+    "email": "Email",
+    "role": "Role",
+    "uploadGallup": "Upload Gallup Report",
+    "processing": "Processing report...",
+    "success": "Report processed successfully",
+    "error": "Failed to process report"
+  },
+  "Talents": {
+    "matrix": "Team Talent Matrix",
+    "profile": "Member Profile",
+    "domains": "Domain Distribution",
+    "heatmap": "Talent Heatmap",
+    "top5": "Top 5 Talents",
+    "top10": "Top 10 Talents"
+  }
+}
