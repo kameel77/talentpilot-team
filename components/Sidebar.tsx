@@ -20,12 +20,12 @@ export default function Sidebar() {
     const locale = pathname.split('/')[1];
 
     const links = [
-        { href: '/dashboard' as const, icon: LayoutDashboard, label: t('dashboard') },
+        { href: '/' as const, icon: LayoutDashboard, label: t('dashboard') },
         { href: '/organizations' as const, icon: Building2, label: t('organizations') },
         { href: '/teams' as const, icon: Users, label: t('teams') },
     ];
 
-    const isActive = (href: string) => pathname.includes(href);
+    const isActive = (href: string) => href === '/' ? pathname === `/${locale}` : pathname.includes(href);
 
     return (
         <aside className="sidebar">
