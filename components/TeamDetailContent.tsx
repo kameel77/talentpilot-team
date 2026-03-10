@@ -246,11 +246,13 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             domainCounts[talent.domain]++;
         }
     });
-    const domainData = (Object.entries(domainCounts) as [GallupDomain, number][]).map(([domain, count]) => ({
-        name: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
-        value: count,
-        color: getDomainStyle(domain),
-    }));
+    const domainData = (Object.entries(domainCounts) as [GallupDomain, number][])
+        .filter(([_, count]) => count > 0)
+        .map(([domain, count]) => ({
+            name: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
+            value: count,
+            color: getDomainStyle(domain),
+        }));
 
     // Top talents summary
     const talentTop10Counts: Record<string, number> = {};
@@ -273,6 +275,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         return {
             domain: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
             value: Math.round(avg * 10) / 10,
+            color: getDomainStyle(domain),
         };
     });
 
@@ -522,7 +525,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                         ))}
                                     </Pie>
                                     <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
-                                    <Legend />
+                                    <Legend iconType="circle" />
                                 </RePieChart>
                             </ResponsiveContainer>
                         ) : <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No data</p>}
@@ -534,7 +537,17 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                             <ResponsiveContainer width="100%" height={300}>
                                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
                                     <PolarGrid stroke="var(--border-color)" />
-                                    <PolarAngleAxis dataKey="domain" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
+                                    <PolarAngleAxis
+                                        dataKey="domain"
+                                        tick={(props: any) => {
+                                            const item = radarData.find(d => d.domain === props.payload.value);
+                                            return (
+                                                <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={props.y > 150 ? 12 : -4}>
+                                                    {props.payload.value}
+                                                </text>
+                                            );
+                                        }}
+                                    />
                                     <PolarRadiusAxis tick={false} axisLine={false} />
                                     <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
                                     <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
