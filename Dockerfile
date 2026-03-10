@@ -39,13 +39,13 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
-# Copy prisma schema, client, and seed
+# Copy prisma schema, client engine, and seed
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Install prisma CLI (with all deps) + bcryptjs for manual docker exec migration/seed
-RUN npm install --no-save prisma@6 bcryptjs
+RUN npm install prisma@latest bcryptjs
 
 USER nextjs
 
