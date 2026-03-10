@@ -52,6 +52,8 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [editNameValue, setEditNameValue] = useState('');
     const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
     const [membersExpanded, setMembersExpanded] = useState(false);
+    const [showTop10Domains, setShowTop10Domains] = useState(false);
+    const [showTop10Profiles, setShowTop10Profiles] = useState(false);
 
     const fetchTeam = useCallback(async () => {
         const res = await apiFetch(`/api/teams/${teamId}`);
@@ -233,12 +235,12 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const teamRankMap: Record<string, number> = {};
     teamRanks.forEach(tr => { teamRankMap[tr.talent] = tr.teamRank; });
 
-    // Domain distribution based on team talent order's Top 5
-    const teamTop5 = teamRanks.filter(tr => tr.teamRank <= 5);
+    // Domain distribution based on team talent order's Top N
+    const teamTopN = teamRanks.filter(tr => tr.teamRank <= (showTop10Domains ? 10 : 5));
     const domainCounts: Record<GallupDomain, number> = {
         executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
     };
-    teamTop5.forEach(tr => {
+    teamTopN.forEach(tr => {
         const talent = GALLUP_TALENTS.find(t => t.code === tr.talent);
         if (talent) {
             domainCounts[talent.domain]++;
@@ -488,10 +490,28 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
 
             {activeTab === 'domains' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                    <div className="glass-card" style={{ padding: 24 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
-                            {tt('domains')} (Top 5)
-                        </h3>
+                    <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>
+                                {tt('domains')} ({showTop10Domains ? tt('top10') : tt('top5')})
+                            </h3>
+                            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-secondary)', padding: 4, borderRadius: 8 }}>
+                                <button
+                                    className={`btn ${!showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
+                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
+                                    onClick={() => setShowTop10Domains(false)}
+                                >
+                                    Top 5
+                                </button>
+                                <button
+                                    className={`btn ${showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
+                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
+                                    onClick={() => setShowTop10Domains(true)}
+                                >
+                                    Top 10
+                                </button>
+                            </div>
+                        </div>
                         {membersWithResults.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RePieChart>
@@ -516,7 +536,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                     <PolarGrid stroke="var(--border-color)" />
                                     <PolarAngleAxis dataKey="domain" tick={{ fill: 'var(--text-secondary)', fontSize: 11 }} />
                                     <PolarRadiusAxis tick={false} axisLine={false} />
-                                    <Radar dataKey="value" stroke="var(--accent-primary)" fill="var(--accent-primary)" fillOpacity={0.3} strokeWidth={2} />
+                                    <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
                                     <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
                                 </RadarChart>
                             </ResponsiveContainer>
@@ -547,63 +567,83 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             )}
 
             {activeTab === 'profiles' && (
-                <div className="cards-grid">
-                    {membersWithResults.map(member => {
-                        const top5 = member.results.filter(r => r.rank <= 5);
-                        const domainProfile: Record<GallupDomain, number> = {
-                            executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
-                        };
-                        top5.forEach(r => {
-                            const d = r.domain as GallupDomain;
-                            if (domainProfile[d] !== undefined) domainProfile[d]++;
-                        });
-                        const topDomain = Object.entries(domainProfile).sort((a, b) => b[1] - a[1])[0];
+                <div>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+                        <div style={{ display: 'inline-flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                            <button
+                                className={`btn ${!showTop10Profiles ? 'btn-primary' : 'btn-ghost'}`}
+                                style={{ padding: '4px 12px', fontSize: 13, minHeight: 0, height: 32 }}
+                                onClick={() => setShowTop10Profiles(false)}
+                            >
+                                Top 5
+                            </button>
+                            <button
+                                className={`btn ${showTop10Profiles ? 'btn-primary' : 'btn-ghost'}`}
+                                style={{ padding: '4px 12px', fontSize: 13, minHeight: 0, height: 32 }}
+                                onClick={() => setShowTop10Profiles(true)}
+                            >
+                                Top 10
+                            </button>
+                        </div>
+                    </div>
+                    <div className="cards-grid">
+                        {membersWithResults.map(member => {
+                            const topN = member.results.filter(r => r.rank <= (showTop10Profiles ? 10 : 5));
+                            const domainProfile: Record<GallupDomain, number> = {
+                                executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
+                            };
+                            topN.forEach(r => {
+                                const d = r.domain as GallupDomain;
+                                if (domainProfile[d] !== undefined) domainProfile[d]++;
+                            });
+                            const topDomain = Object.entries(domainProfile).sort((a, b) => b[1] - a[1])[0];
 
-                        return (
-                            <div key={member.id} className="glass-card" style={{ padding: 24 }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
-                                    <div>
-                                        <h3 style={{ fontSize: 16, fontWeight: 600 }}>{member.name}</h3>
-                                        {member.role && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{member.role}</p>}
+                            return (
+                                <div key={member.id} className="glass-card" style={{ padding: 24 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
+                                        <div>
+                                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{member.name}</h3>
+                                            {member.role && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{member.role}</p>}
+                                        </div>
+                                        <div className={`domain-badge ${topDomain[0]}`}>
+                                            {DOMAIN_LABELS[topDomain[0] as GallupDomain][locale as 'en' | 'pl']}
+                                        </div>
                                     </div>
-                                    <div className={`domain-badge ${topDomain[0]}`}>
-                                        {DOMAIN_LABELS[topDomain[0] as GallupDomain][locale as 'en' | 'pl']}
+
+                                    <div style={{ marginBottom: 16 }}>
+                                        <p style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+                                            {showTop10Profiles ? tt('top10') : tt('top5')}
+                                        </p>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                            {topN.map(r => {
+                                                const talent = GALLUP_TALENTS.find(t => t.code === r.talent);
+                                                return talent ? (
+                                                    <span key={r.id} style={{
+                                                        padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
+                                                        background: getDomainStyle(talent.domain, 20),
+                                                        color: getDomainStyle(talent.domain),
+                                                        border: `1px solid ${getDomainStyle(talent.domain, 25)}`,
+                                                    }}>
+                                                        #{r.rank} {talent[locale as 'en' | 'pl']}
+                                                    </span>
+                                                ) : null;
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: 4 }}>
+                                        {(Object.entries(domainProfile) as [GallupDomain, number][]).map(([d, count]) => (
+                                            <div key={d} style={{
+                                                flex: count || 0.2, height: 6, borderRadius: 3,
+                                                background: count ? getDomainStyle(d) : getDomainStyle(d, 15),
+                                                transition: 'flex 0.3s ease',
+                                            }} title={`${DOMAIN_LABELS[d][locale as 'en' | 'pl']}: ${count}`} />
+                                        ))}
                                     </div>
                                 </div>
-
-                                <div style={{ marginBottom: 16 }}>
-                                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                                        {tt('top5')}
-                                    </p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                                        {top5.map(r => {
-                                            const talent = GALLUP_TALENTS.find(t => t.code === r.talent);
-                                            return talent ? (
-                                                <span key={r.id} style={{
-                                                    padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
-                                                    background: getDomainStyle(talent.domain, 20),
-                                                    color: getDomainStyle(talent.domain),
-                                                    border: `1px solid ${getDomainStyle(talent.domain, 25)}`,
-                                                }}>
-                                                    #{r.rank} {talent[locale as 'en' | 'pl']}
-                                                </span>
-                                            ) : null;
-                                        })}
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: 4 }}>
-                                    {(Object.entries(domainProfile) as [GallupDomain, number][]).map(([d, count]) => (
-                                        <div key={d} style={{
-                                            flex: count || 0.2, height: 6, borderRadius: 3,
-                                            background: count ? getDomainStyle(d) : getDomainStyle(d, 15),
-                                            transition: 'flex 0.3s ease',
-                                        }} title={`${DOMAIN_LABELS[d][locale as 'en' | 'pl']}: ${count}`} />
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    })}
+                            );
+                        })}
+                    </div>
                 </div>
             )}
 
