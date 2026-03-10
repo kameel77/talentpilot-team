@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useSearchParams } from 'next/navigation';
-import { GALLUP_TALENTS, DOMAIN_COLORS, DOMAIN_LABELS, type GallupDomain, getTalentsByDomain } from '@/lib/gallup-data';
+import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, type GallupDomain, getTalentsByDomain } from '@/lib/gallup-data';
 import { teamTalentRanks } from '@/lib/team-algorithms';
 import { Info } from 'lucide-react';
 
@@ -130,8 +130,8 @@ export default function PresentationContent({ token }: { token: string }) {
     );
 
     const BUCKET_COLORS: Record<RankBucket, string> = {
-        '1-5': '#6B33CC',
-        '6-10': '#1A80E6',
+        '1-5': getDomainStyle('executing'),
+        '6-10': getDomainStyle('relationship_building'),
         '11-29': '#94a3b8',
         '30-34': '#475569',
     };
@@ -185,8 +185,8 @@ export default function PresentationContent({ token }: { token: string }) {
                                             colSpan={talents.length}
                                             className="domain-header-cell"
                                             style={{
-                                                background: `${DOMAIN_COLORS[domain]}18`,
-                                                borderBottom: `3px solid ${DOMAIN_COLORS[domain]}`,
+                                                background: getDomainStyle(domain, 10),
+                                                borderBottom: `3px solid ${getDomainStyle(domain)}`,
                                                 textAlign: 'center',
                                                 padding: '12px 8px 8px',
                                                 position: 'relative',
@@ -197,7 +197,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                             <div style={{
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 gap: 6, fontWeight: 700, fontSize: 12,
-                                                color: DOMAIN_COLORS[domain],
+                                                color: getDomainStyle(domain),
                                                 letterSpacing: '0.08em',
                                             }}>
                                                 {DOMAIN_PRESENTATION_LABELS[domain][locale]}
@@ -225,7 +225,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                     <th key={talent.code} style={{
                                         writingMode: 'vertical-rl', textOrientation: 'mixed',
                                         padding: '8px 4px', textAlign: 'center', minWidth: 32,
-                                        color: DOMAIN_COLORS[talent.domain],
+                                        color: getDomainStyle(talent.domain),
                                         fontSize: 11, fontWeight: 500,
                                     }}>
                                         {talent[locale]}
@@ -252,7 +252,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                         const visible = isRankVisible(rank);
                                         const bg = !visible ? 'transparent'
                                             : rank >= 30 ? 'var(--text-secondary)'
-                                                : `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? 'bb' : '33'}`;
+                                                : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 10 ? 75 : 20);
                                         const textColor = !visible ? 'transparent'
                                             : rank >= 30 ? 'var(--bg-primary)'
                                                 : rank <= 10 ? '#fff' : 'var(--text-primary)';
@@ -304,7 +304,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                             const visible = isRankVisible(rank);
                                             const bg = !visible ? 'transparent'
                                                 : rank >= 30 ? 'var(--text-secondary)'
-                                                    : `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? 'bb' : '33'}`;
+                                                    : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 10 ? 75 : 20);
                                             const textColor = !visible ? 'transparent'
                                                 : rank >= 30 ? 'var(--bg-primary)'
                                                     : rank <= 10 ? '#fff' : 'var(--text-primary)';
@@ -351,8 +351,8 @@ export default function PresentationContent({ token }: { token: string }) {
                                                 width: 32, height: 32, margin: '0 auto', borderRadius: 6,
                                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                 fontWeight: 700, fontSize: 13,
-                                                background: count >= 2 ? `${DOMAIN_COLORS[talent.domain]}cc` : count === 1 ? `${DOMAIN_COLORS[talent.domain]}44` : 'transparent',
-                                                color: count >= 2 ? '#fff' : count === 1 ? DOMAIN_COLORS[talent.domain] : 'var(--text-muted)',
+                                                background: count >= 2 ? getDomainStyle(talent.domain, 80) : count === 1 ? getDomainStyle(talent.domain, 25) : 'transparent',
+                                                color: count >= 2 ? '#fff' : count === 1 ? getDomainStyle(talent.domain) : 'var(--text-muted)',
                                             }}>
                                                 {count || ''}
                                             </div>

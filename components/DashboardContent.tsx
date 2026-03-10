@@ -54,7 +54,8 @@ export default function DashboardContent() {
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                 <div style={{
                                     width: 40, height: 40, borderRadius: 10,
-                                    background: `${color}22`, display: 'flex',
+                                    background: `color-mix(in srgb, ${color} 15%, transparent)`,
+                                    display: 'flex',
                                     alignItems: 'center', justifyContent: 'center',
                                 }}>
                                     <Icon size={20} style={{ color }} />

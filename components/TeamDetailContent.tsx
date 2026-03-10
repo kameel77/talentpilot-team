@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useApi } from '@/lib/auth-context';
-import { GALLUP_TALENTS, DOMAIN_COLORS, DOMAIN_LABELS, type GallupDomain } from '@/lib/gallup-data';
+import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, type GallupDomain } from '@/lib/gallup-data';
 import { teamTalentRanks, dominantDomain } from '@/lib/team-algorithms';
 import {
     Plus, Upload, ArrowLeft, Trash2, UserPlus, X,
@@ -247,7 +247,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const domainData = (Object.entries(domainCounts) as [GallupDomain, number][]).map(([domain, count]) => ({
         name: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
         value: count,
-        color: DOMAIN_COLORS[domain],
+        color: getDomainStyle(domain),
     }));
 
     // Top talents summary
@@ -323,7 +323,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                         <UserPlus size={18} /> {t('add')}
                     </button>
                     <button className="btn btn-primary" onClick={openPresentation}
-                        style={{ background: 'linear-gradient(135deg, #1A80E6, #1FAD91)' }}>
+                        style={{ background: `linear-gradient(135deg, ${getDomainStyle('relationship_building')}, ${getDomainStyle('strategic_thinking')})` }}>
                         <Presentation size={18} /> {tp('title')}
                     </button>
                 </div>
@@ -366,8 +366,8 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             <th key={talent.code} style={{
                                                 writingMode: 'vertical-rl', textOrientation: 'mixed',
                                                 padding: '8px 4px', textAlign: 'center', minWidth: 32,
-                                                color: DOMAIN_COLORS[talent.domain],
-                                                borderBottom: `3px solid ${DOMAIN_COLORS[talent.domain]}`,
+                                                color: getDomainStyle(talent.domain),
+                                                borderBottom: `3px solid ${getDomainStyle(talent.domain)}`,
                                             }}>
                                                 {talent[locale as 'en' | 'pl']}
                                             </th>
@@ -392,7 +392,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
 
                                                     const bg = rank >= 30
                                                         ? 'var(--text-secondary)'
-                                                        : `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? 'bb' : '33'}`;
+                                                        : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 10 ? 75 : 20);
                                                     const textColor = rank >= 30
                                                         ? 'var(--bg-primary)'
                                                         : rank <= 10 ? '#fff' : 'var(--text-primary)';
@@ -434,7 +434,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
 
                                                 const bg = rank >= 30
                                                     ? 'var(--text-secondary)'
-                                                    : `${DOMAIN_COLORS[talent.domain]}${rank <= 5 ? 'ff' : rank <= 10 ? 'bb' : '33'}`;
+                                                    : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 10 ? 75 : 20);
                                                 const textColor = rank >= 30
                                                     ? 'var(--bg-primary)'
                                                     : rank <= 10 ? '#fff' : 'var(--text-primary)';
@@ -470,8 +470,8 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                                         width: 32, height: 32, margin: '0 auto', borderRadius: 6,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         fontWeight: 700, fontSize: 13,
-                                                        background: count >= 2 ? `${DOMAIN_COLORS[talent.domain]}cc` : count === 1 ? `${DOMAIN_COLORS[talent.domain]}44` : 'transparent',
-                                                        color: count >= 2 ? '#fff' : count === 1 ? DOMAIN_COLORS[talent.domain] : 'var(--text-muted)',
+                                                        background: count >= 2 ? getDomainStyle(talent.domain, 80) : count === 1 ? getDomainStyle(talent.domain, 25) : 'transparent',
+                                                        color: count >= 2 ? '#fff' : count === 1 ? getDomainStyle(talent.domain) : 'var(--text-muted)',
                                                     }}>
                                                         {count || ''}
                                                     </div>
@@ -581,9 +581,9 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             return talent ? (
                                                 <span key={r.id} style={{
                                                     padding: '4px 10px', borderRadius: 6, fontSize: 12, fontWeight: 600,
-                                                    background: `${DOMAIN_COLORS[talent.domain]}33`,
-                                                    color: DOMAIN_COLORS[talent.domain],
-                                                    border: `1px solid ${DOMAIN_COLORS[talent.domain]}44`,
+                                                    background: getDomainStyle(talent.domain, 20),
+                                                    color: getDomainStyle(talent.domain),
+                                                    border: `1px solid ${getDomainStyle(talent.domain, 25)}`,
                                                 }}>
                                                     #{r.rank} {talent[locale as 'en' | 'pl']}
                                                 </span>
@@ -596,7 +596,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                     {(Object.entries(domainProfile) as [GallupDomain, number][]).map(([d, count]) => (
                                         <div key={d} style={{
                                             flex: count || 0.2, height: 6, borderRadius: 3,
-                                            background: count ? DOMAIN_COLORS[d] : `${DOMAIN_COLORS[d]}22`,
+                                            background: count ? getDomainStyle(d) : getDomainStyle(d, 15),
                                             transition: 'flex 0.3s ease',
                                         }} title={`${DOMAIN_LABELS[d][locale as 'en' | 'pl']}: ${count}`} />
                                     ))}

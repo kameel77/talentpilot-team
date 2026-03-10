@@ -15,9 +15,28 @@ export interface GallupTalent {
 export const DOMAIN_COLORS: Record<GallupDomain, string> = {
     executing: '#6B33CC',
     influencing: '#F97415',
-    relationship_building: '#1FAD91',
-    strategic_thinking: '#1A80E6',
+    relationship_building: '#1A80E6',
+    strategic_thinking: '#1FAD91',
 };
+
+/**
+ * CSS Variable names for domains (matching globals.css)
+ */
+export const DOMAIN_VAR_MAP: Record<GallupDomain, string> = {
+    executing: 'var(--domain-executing)',
+    influencing: 'var(--domain-influencing)',
+    relationship_building: 'var(--domain-relationship)',
+    strategic_thinking: 'var(--domain-strategic)',
+};
+
+/**
+ * Helper to get domain color as CSS variable or color-mix for transparency
+ */
+export function getDomainStyle(domain: GallupDomain, opacity: number = 100): string {
+    const varName = DOMAIN_VAR_MAP[domain];
+    if (opacity === 100) return varName;
+    return `color-mix(in srgb, ${varName} ${opacity}%, transparent)`;
+}
 
 export const DOMAIN_LABELS: Record<GallupDomain, { en: string; pl: string }> = {
     executing: { en: 'Executing', pl: 'Realizowanie' },
