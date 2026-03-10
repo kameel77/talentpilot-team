@@ -553,3 +553,175 @@ body:has(.sidebar.collapsed) .main-content {
   border-color: var(--accent-secondary);
   background: rgba(168, 85, 247, 0.1);
 }
+
+/* ===== Presentation Page ===== */
+.presentation-page {
+  max-width: 100%;
+  padding: 32px 40px;
+  min-height: 100vh;
+  background: var(--bg-primary);
+}
+
+.presentation-header {
+  margin-bottom: 24px;
+}
+
+.presentation-title {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.presentation-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.presentation-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  font-size: 18px;
+  color: var(--text-secondary);
+}
+
+.presentation-matrix-card {
+  padding: 24px;
+  overflow: visible;
+}
+
+.presentation-table {
+  border-collapse: collapse;
+}
+
+/* Rank Filters */
+.rank-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+}
+
+.rank-filters-label {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-secondary);
+  margin-right: 4px;
+}
+
+.rank-filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  user-select: none;
+}
+
+.rank-filter-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.rank-filter-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+/* Domain Header */
+.domain-header-row th {
+  border-bottom: none;
+}
+
+.domain-header-cell {
+  position: relative;
+  cursor: help;
+}
+
+.domain-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: 280px;
+  padding: 12px 14px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  text-align: left;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  animation: fadeIn 0.15s ease;
+  pointer-events: none;
+}
+
+/* Team rank row */
+.team-rank-row td {
+  background: color-mix(in srgb, var(--accent-primary) 4%, var(--bg-card));
+}
+
+/* ===== Collapsible Section ===== */
+.collapsible-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  padding: 16px 24px;
+}
+
+.collapsible-header h3 {
+  font-size: 16px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.collapsible-chevron {
+  transition: transform 0.3s ease;
+  color: var(--text-secondary);
+}
+
+.collapsible-chevron.open {
+  transform: rotate(180deg);
+}
+
+.collapsible-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+}
+
+.collapsible-body.open {
+  max-height: 2000px;
+  padding: 0 24px 24px;
+}
+
+/* Selection checkbox in table */
+.member-select-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+}

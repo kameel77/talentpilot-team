@@ -1,7 +1,7 @@
 'use client';
 
 import { useTranslations, useLocale } from 'next-intl';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, usePathname } from '@/i18n/routing';
 import { useAuth } from '@/lib/auth-context';
 import {
@@ -15,11 +15,23 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
-    const [collapsed, setCollapsed] = useState(false);
+    const [collapsed, setCollapsed] = useState(true);
     const t = useTranslations('Common');
     const { logout } = useAuth();
     const pathname = usePathname();
     const locale = useLocale();
+
+    useEffect(() => {
+        const saved = localStorage.getItem('sidebar-collapsed');
+        if (saved !== null) {
+            setCollapsed(saved === 'true');
+        }
+    }, []);
+
+    const toggleCollapsed = (newState: boolean) => {
+        setCollapsed(newState);
+        localStorage.setItem('sidebar-collapsed', String(newState));
+    };
 
     const links = [
         { href: '/' as const, icon: LayoutDashboard, label: t('dashboard') },
@@ -37,7 +49,7 @@ export default function Sidebar() {
                     <h1 className="sidebar-title">{t('title')}</h1>
                 </div>
                 <button
-                    onClick={() => setCollapsed(!collapsed)}
+                    onClick={() => toggleCollapsed(!collapsed)}
                     className="sidebar-toggle" style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
                 >
                     {collapsed ? null : <ChevronLeft size={20} />}
@@ -68,7 +80,7 @@ export default function Sidebar() {
                 </div>
 
                 {collapsed && (
-                    <button onClick={() => setCollapsed(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 16 }}>
+                    <button onClick={() => toggleCollapsed(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', marginBottom: 16 }}>
                         <ChevronRight size={20} />
                     </button>
                 )}

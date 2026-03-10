@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useApi } from '@/lib/auth-context';
 import { GALLUP_TALENTS, DOMAIN_COLORS, DOMAIN_LABELS, type GallupDomain } from '@/lib/gallup-data';
 import { teamTalentRanks, dominantDomain } from '@/lib/team-algorithms';
 import {
     Plus, Upload, ArrowLeft, Trash2, UserPlus, X,
-    BarChart3, Grid3x3, PieChart, Edit2, Check
+    BarChart3, Grid3x3, PieChart, Edit2, Check,
+    ChevronDown, ExternalLink, Presentation
 } from 'lucide-react';
 import {
     PieChart as RePieChart, Pie, Cell, ResponsiveContainer,
@@ -34,6 +35,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const t = useTranslations('Member');
     const tt = useTranslations('Talents');
     const tc = useTranslations('Common');
+    const tp = useTranslations('Presentation');
     const locale = useLocale();
     const { apiFetch, apiUpload } = useApi();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -48,6 +50,8 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains' | 'profiles'>('matrix');
     const [isEditingName, setIsEditingName] = useState(false);
     const [editNameValue, setEditNameValue] = useState('');
+    const [selectedMembers, setSelectedMembers] = useState<Set<string>>(new Set());
+    const [membersExpanded, setMembersExpanded] = useState(false);
 
     const fetchTeam = useCallback(async () => {
         const res = await apiFetch(`/api/teams/${teamId}`);
@@ -175,6 +179,42 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         e.target.value = '';
     };
 
+    const openPresentation = async () => {
+        try {
+            const res = await apiFetch(`/api/teams/${teamId}/presentation-token`, { method: 'POST' });
+            const data = await res.json();
+            if (data.token) {
+                const membersParam = selectedMembers.size === 0
+                    ? 'none'
+                    : selectedMembers.size === team?.members.filter(m => m.results.length > 0).length
+                        ? 'all'
+                        : Array.from(selectedMembers).join(',');
+                window.open(`/${locale}/matrix/${data.token}?members=${membersParam}`, '_blank');
+            }
+        } catch (err) {
+            console.error('Failed to generate presentation token:', err);
+        }
+    };
+
+    const toggleMemberSelection = (id: string) => {
+        setSelectedMembers(prev => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id);
+            else next.add(id);
+            return next;
+        });
+    };
+
+    const toggleSelectAll = () => {
+        if (!team) return;
+        const membersWithData = team.members.filter(m => m.results.length > 0);
+        if (selectedMembers.size === membersWithData.length) {
+            setSelectedMembers(new Set());
+        } else {
+            setSelectedMembers(new Set(membersWithData.map(m => m.id)));
+        }
+    };
+
     if (loading) return <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>;
     if (!team) return <p>Team not found</p>;
 
@@ -281,6 +321,10 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                     </button>
                     <button className="btn btn-primary" onClick={() => setShowAddMember(true)}>
                         <UserPlus size={18} /> {t('add')}
+                    </button>
+                    <button className="btn btn-primary" onClick={openPresentation}
+                        style={{ background: 'linear-gradient(135deg, #1A80E6, #1FAD91)' }}>
+                        <Presentation size={18} /> {tp('title')}
                     </button>
                 </div>
             </div>
@@ -563,48 +607,92 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                 </div>
             )}
 
-            {/* Members list with upload */}
-            <div className="glass-card" style={{ padding: 24, marginTop: 24 }}>
-                <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Team Members</h3>
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>{t('name')}</th>
-                            <th>{t('role')}</th>
-                            <th>Talents</th>
-                            <th>{tc('actions')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {team.members.map(member => (
-                            <tr key={member.id}>
-                                <td style={{ fontWeight: 500 }}>{member.name}</td>
-                                <td style={{ color: 'var(--text-secondary)' }}>{member.role || '—'}</td>
-                                <td>
-                                    {member.results.length > 0 ? (
-                                        <span style={{ color: 'var(--success)', fontSize: 13 }}>
-                                            ✓ {member.results.length} talents
-                                        </span>
-                                    ) : (
-                                        <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No data</span>
-                                    )}
-                                </td>
-                                <td>
-                                    <div style={{ display: 'flex', gap: 8 }}>
-                                        <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}
-                                            onClick={() => triggerUpload(member.id)}>
-                                            <Upload size={14} /> {t('uploadGallup')}
-                                        </button>
-                                        <button className="btn btn-danger" style={{ padding: '4px 8px' }}
-                                            onClick={() => deleteMember(member.id)}>
-                                            <Trash2 size={14} />
-                                        </button>
-                                    </div>
-                                </td>
+            {/* Members list with upload — collapsible */}
+            <div className="glass-card" style={{ marginTop: 24 }}>
+                <div className="collapsible-header" onClick={() => setMembersExpanded(!membersExpanded)}>
+                    <h3>
+                        {tp('teamMembers')}
+                        <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--text-secondary)' }}>
+                            ({team.members.length})
+                            {selectedMembers.size > 0 && (
+                                <span style={{ color: 'var(--accent-primary)', marginLeft: 8 }}>
+                                    · {selectedMembers.size} {locale === 'pl' ? 'wybranych' : 'selected'}
+                                </span>
+                            )}
+                        </span>
+                    </h3>
+                    <ChevronDown size={20} className={`collapsible-chevron ${membersExpanded ? 'open' : ''}`} />
+                </div>
+                <div className={`collapsible-body ${membersExpanded ? 'open' : ''}`}>
+                    {/* Select all / Deselect all */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                        <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: 12 }}
+                            onClick={toggleSelectAll}>
+                            {selectedMembers.size === team.members.filter(m => m.results.length > 0).length
+                                ? tp('deselectAll')
+                                : tp('selectAll')
+                            }
+                        </button>
+                    </div>
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th style={{ width: 40, textAlign: 'center' }}>
+                                    <input
+                                        type="checkbox"
+                                        className="member-select-checkbox"
+                                        checked={team.members.filter(m => m.results.length > 0).length > 0 &&
+                                            selectedMembers.size === team.members.filter(m => m.results.length > 0).length}
+                                        onChange={toggleSelectAll}
+                                    />
+                                </th>
+                                <th>{t('name')}</th>
+                                <th>{t('role')}</th>
+                                <th>Talents</th>
+                                <th>{tc('actions')}</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {team.members.map(member => (
+                                <tr key={member.id}>
+                                    <td style={{ textAlign: 'center' }}>
+                                        {member.results.length > 0 && (
+                                            <input
+                                                type="checkbox"
+                                                className="member-select-checkbox"
+                                                checked={selectedMembers.has(member.id)}
+                                                onChange={() => toggleMemberSelection(member.id)}
+                                            />
+                                        )}
+                                    </td>
+                                    <td style={{ fontWeight: 500 }}>{member.name}</td>
+                                    <td style={{ color: 'var(--text-secondary)' }}>{member.role || '—'}</td>
+                                    <td>
+                                        {member.results.length > 0 ? (
+                                            <span style={{ color: 'var(--success)', fontSize: 13 }}>
+                                                ✓ {member.results.length} talents
+                                            </span>
+                                        ) : (
+                                            <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>No data</span>
+                                        )}
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', gap: 8 }}>
+                                            <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}
+                                                onClick={() => triggerUpload(member.id)}>
+                                                <Upload size={14} /> {t('uploadGallup')}
+                                            </button>
+                                            <button className="btn btn-danger" style={{ padding: '4px 8px' }}
+                                                onClick={() => deleteMember(member.id)}>
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             {/* Upload status toast */}

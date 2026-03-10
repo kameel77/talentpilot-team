@@ -54,5 +54,21 @@
     "top10Summary": "Top 10 Summary",
     "teamRow": "Team's Rank",
     "teamRank": "Team Rank"
+  },
+  "Presentation": {
+    "title": "Results Presentation",
+    "selectAll": "Select All",
+    "deselectAll": "Deselect All",
+    "show": "Show",
+    "teamMembers": "Team Members",
+    "teamRank": "Team Trait Rank",
+    "showTeamInfo": "Show team information",
+    "hideTeamInfo": "Hide team information",
+    "notFound": "Presentation not found",
+    "loading": "Loading...",
+    "domainExecutingDesc": "People strong in Executing themes make things happen. They know how to turn ideas into action and deliver results.",
+    "domainInfluencingDesc": "People strong in Influencing themes take charge, speak up, and make sure others are heard.",
+    "domainRelationshipDesc": "People strong in Relationship Building themes build strong relationships that hold a team together and make it greater than the sum of its parts.",
+    "domainStrategicDesc": "People strong in Strategic Thinking themes help teams consider what could be. They absorb and analyze information to make better decisions."
   }
 }
