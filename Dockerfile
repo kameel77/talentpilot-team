@@ -45,7 +45,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modul
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma/client ./node_modules/@prisma/client
 
 # Install prisma CLI (with all deps) + bcryptjs for manual docker exec migration/seed
-RUN npm install prisma@latest bcryptjs
+RUN npm install prisma@6 bcryptjs
 
 USER nextjs
 
