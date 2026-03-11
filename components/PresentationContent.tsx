@@ -87,9 +87,11 @@ export default function PresentationContent({ token }: { token: string }) {
         return team.members.filter(m => m.results.length > 0);
     }, [team]);
 
+    const sourceMembers = displayMembers.length > 0 ? displayMembers : allMembersWithResults;
+
     // Team talent rankings based on visible members
     const talentCodes = GALLUP_TALENTS.map(t => t.code);
-    const membersRankMaps = displayMembers.map(m => {
+    const membersRankMaps = sourceMembers.map(m => {
         const map: Record<string, number> = {};
         m.results.forEach(r => { map[r.talent] = r.rank; });
         return map;
@@ -100,7 +102,7 @@ export default function PresentationContent({ token }: { token: string }) {
 
     // Top 10 counts based on visible members
     const talentTop10Counts: Record<string, number> = {};
-    displayMembers.forEach(m => {
+    sourceMembers.forEach(m => {
         m.results.filter(r => r.rank <= 10).forEach(r => {
             talentTop10Counts[r.talent] = (talentTop10Counts[r.talent] || 0) + 1;
         });
@@ -127,13 +129,13 @@ export default function PresentationContent({ token }: { token: string }) {
 
     // Radar data per domain based on visible members
     const radarData = (Object.keys(DOMAIN_LABELS) as GallupDomain[]).map(domain => {
-        const avg = displayMembers.length > 0
-            ? displayMembers.reduce((sum, m) => {
+        const avg = sourceMembers.length > 0
+            ? sourceMembers.reduce((sum, m) => {
                 const domainTalents = m.results.filter(r => r.domain === domain);
                 const avgRank = domainTalents.length > 0
                     ? domainTalents.reduce((s, r) => s + r.rank, 0) / domainTalents.length : 34;
                 return sum + (35 - avgRank); // invert so higher is better
-            }, 0) / displayMembers.length
+            }, 0) / sourceMembers.length
             : 0;
         return {
             domain: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
@@ -399,7 +401,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                     })}
 
                                     {/* Spacer before summary */}
-                                    {teamRanks.length > 0 && displayMembers.length > 0 && (
+                                    {teamRanks.length > 0 && displayMembers.length === 0 && (
                                         <tr>
                                             <td colSpan={35} style={{ height: 12, background: 'transparent', border: 'none' }} />
                                         </tr>
@@ -461,7 +463,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                 </button>
                             </div>
                         </div>
-                        {displayMembers.length > 0 ? (
+                        {sourceMembers.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RePieChart>
                                     <Pie data={domainData} dataKey="value" nameKey="name" cx="50%" cy="50%"
@@ -479,7 +481,7 @@ export default function PresentationContent({ token }: { token: string }) {
 
                     <div className="glass-card" style={{ padding: 24 }}>
                         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Team Domain Radar</h3>
-                        {displayMembers.length > 0 ? (
+                        {sourceMembers.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
                                     <PolarGrid stroke="var(--border-color)" />
