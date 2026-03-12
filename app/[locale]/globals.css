@@ -725,3 +725,36 @@ body:has(.sidebar.collapsed) .main-content {
   cursor: pointer;
   accent-color: var(--accent-primary);
 }
+
+/* ===== Specialist Star Tooltip ===== */
+.specialist-star {
+  position: relative;
+}
+
+.specialist-star::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  right: -10px;
+  width: 240px;
+  padding: 10px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: normal;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.1s ease, visibility 0.1s ease;
+  z-index: 100;
+}
+
+.specialist-star:hover::after {
+  opacity: 1;
+  visibility: visible;
+}

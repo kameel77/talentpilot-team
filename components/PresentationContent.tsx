@@ -468,80 +468,84 @@ export default function PresentationContent({ token }: { token: string }) {
             )}
 
             {activeTab === 'domains' && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 20, padding: '0 24px' }}>
-                    <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
-                            {tt('domainCount')} {showTop10 ? tt('top10') : tt('top5')}
-                        </h3>
-                        {sourceMembers.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <RePieChart>
-                                    <Pie data={domainCountData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                                        outerRadius={100} innerRadius={50} paddingAngle={3} strokeWidth={0}>
-                                        {domainCountData.map((entry, i) => (
-                                            <Cell key={i} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
-                                    <Legend iconType="circle" />
-                                </RePieChart>
-                            </ResponsiveContainer>
-                        ) : <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No data</p>}
-                    </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20, padding: '0 24px' }}>
+                    {/* Top row: Pie - Rank Tags - Radar */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '4fr 2fr 4fr', gap: 20 }}>
+                        <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
+                                {tt('domainCount')} {showTop10 ? tt('top10') : tt('top5')}
+                            </h3>
+                            {sourceMembers.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <RePieChart>
+                                        <Pie data={domainCountData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                                            outerRadius={100} innerRadius={50} paddingAngle={3} strokeWidth={0}>
+                                            {domainCountData.map((entry, i) => (
+                                                <Cell key={i} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
+                                        <Legend iconType="circle" />
+                                    </RePieChart>
+                                </ResponsiveContainer>
+                            ) : <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No data</p>}
+                        </div>
 
-                    {/* Team Rank Tag List */}
-                    <div className="glass-card" style={{ padding: 24, gridColumn: '1 / -1' }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
-                            {tt('teamRankList')} ({showTop10 ? tt('top10') : tt('top5')})
-                        </h3>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {teamTopN.map(tr => {
-                                const talent = GALLUP_TALENTS.find(t => t.code === tr.talent);
-                                if (!talent) return null;
-                                return (
-                                    <div key={tr.talent} className={`domain-badge ${talent.domain}`} style={{ padding: '6px 14px' }}>
-                                        #{tr.teamRank} {talent[locale as 'en' | 'pl']}
-                                    </div>
-                                );
-                            })}
+                        {/* Team Rank Tag List */}
+                        <div className="glass-card" style={{ padding: 24 }}>
+                            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
+                                {tt('teamRankList')}
+                            </h3>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                                {teamTopN.map(tr => {
+                                    const talent = GALLUP_TALENTS.find(t => t.code === tr.talent);
+                                    if (!talent) return null;
+                                    return (
+                                        <div key={tr.talent} className={`domain-badge ${talent.domain}`} style={{ padding: '4px 10px', fontSize: 11 }}>
+                                            #{tr.teamRank} {talent[locale as 'en' | 'pl']}
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="glass-card" style={{ padding: 24 }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{tt('domainStrength')} — Radar</h3>
+                            {sourceMembers.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
+                                        <PolarGrid stroke="var(--border-color)" />
+                                        <PolarAngleAxis
+                                            dataKey="domain"
+                                            tick={(props: any) => {
+                                                const item = radarData.find(d => d.domain === props.payload.value);
+                                                return (
+                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={props.y > 150 ? 12 : -4}>
+                                                        {props.payload.value}
+                                                    </text>
+                                                );
+                                            }}
+                                        />
+                                        <PolarRadiusAxis tick={false} axisLine={false} />
+                                        <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
+                                        <Tooltip content={({ active, payload }: any) => {
+                                            if (!active || !payload?.[0]) return null;
+                                            const p = payload[0].payload;
+                                            return (
+                                                <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)' }}>
+                                                    <div style={{ fontWeight: 600 }}>{p.domain}</div>
+                                                    <div>{p.score} {tt('pts')}</div>
+                                                </div>
+                                            );
+                                        }} />
+                                    </RadarChart>
+                                </ResponsiveContainer>
+                            ) : <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No data</p>}
                         </div>
                     </div>
 
-                    <div className="glass-card" style={{ padding: 24 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{tt('domainStrength')} — Radar</h3>
-                        {sourceMembers.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={300}>
-                                <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
-                                    <PolarGrid stroke="var(--border-color)" />
-                                    <PolarAngleAxis
-                                        dataKey="domain"
-                                        tick={(props: any) => {
-                                            const item = radarData.find(d => d.domain === props.payload.value);
-                                            return (
-                                                <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={props.y > 150 ? 12 : -4}>
-                                                    {props.payload.value}
-                                                </text>
-                                            );
-                                        }}
-                                    />
-                                    <PolarRadiusAxis tick={false} axisLine={false} />
-                                    <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
-                                    <Tooltip content={({ active, payload }: any) => {
-                                        if (!active || !payload?.[0]) return null;
-                                        const p = payload[0].payload;
-                                        return (
-                                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)' }}>
-                                                <div style={{ fontWeight: 600 }}>{p.domain}</div>
-                                                <div>{p.score} {tt('pts')}</div>
-                                            </div>
-                                        );
-                                    }} />
-                                </RadarChart>
-                            </ResponsiveContainer>
-                        ) : <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No data</p>}
-                    </div>
-
-                    {/* Top talents list */}
+                    {/* Bottom sections */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                     <div className="glass-card" style={{ padding: 24, gridColumn: '1 / -1' }}>
                         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
                             {tt('heatmap')} — Most common in Top 10
@@ -631,9 +635,9 @@ export default function PresentationContent({ token }: { token: string }) {
                             </div>
                         ) : <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>✅ {tt('noSpof')}</p>}
                     </div>
+                    </div>
                 </div>
-            )
-            }
+            )}
 
             {
                 activeTab === 'profiles' && (
@@ -668,7 +672,8 @@ export default function PresentationContent({ token }: { token: string }) {
                                                 </div>
                                                 {specialist.isSpecialist && (
                                                     <span
-                                                        title={tt('specialistTooltip')}
+                                                        className="specialist-star"
+                                                        data-tooltip={tt('specialistTooltip')}
                                                         style={{
                                                             position: 'absolute', top: -6, right: -8,
                                                             cursor: 'help',
