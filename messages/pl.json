@@ -61,10 +61,11 @@
         "spofAlertsDesc": "Talenty, gdzie tylko JEDNA osoba ma je w Top 10 — ryzyko przy odejściu",
         "domainSpecialist": "Specjalista",
         "ofTeam": "zespołu",
-        "soleCarrier": "jedyny nosiciel",
+        "soleCarrier": "Jedyna osoba",
         "pts": "pkt",
         "noWeaknesses": "Brak istotnych luk — zespół ma dobre pokrycie talentów",
-        "noSpof": "Brak krytycznych zależności — talenty są dobrze rozproszone"
+        "noSpof": "Brak krytycznych zależności — talenty są dobrze rozproszone",
+        "domainCount": "Domeny w"
     },
     "Presentation": {
         "title": "Prezentacja wyników",

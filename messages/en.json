@@ -61,10 +61,11 @@
     "spofAlertsDesc": "Talents where only ONE person has it in Top 10 — risk if they leave",
     "domainSpecialist": "Specialist",
     "ofTeam": "of team",
-    "soleCarrier": "sole carrier",
+    "soleCarrier": "Only person",
     "pts": "pts",
     "noWeaknesses": "No significant weaknesses detected — the team has good coverage",
-    "noSpof": "No critical dependencies — talents are well distributed"
+    "noSpof": "No critical dependencies — talents are well distributed",
+    "domainCount": "Domains in"
   },
   "Presentation": {
     "title": "Results Presentation",

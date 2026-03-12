@@ -245,19 +245,31 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         strategic_thinking: getTalentsByDomain('strategic_thinking').map(t => t.code),
     };
 
-    // P0: Domain strength scores (weighted)
+    // Pie chart: count talents per domain in team's Top N
+    const teamTopN = teamRanks.filter(tr => tr.teamRank <= (showTop10Domains ? 10 : 5));
+    const domainCounts: Record<GallupDomain, number> = {
+        executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
+    };
+    teamTopN.forEach(tr => {
+        const talent = GALLUP_TALENTS.find(t => t.code === tr.talent);
+        if (talent) domainCounts[talent.domain]++;
+    });
+    const domainCountData = (Object.entries(domainCounts) as [GallupDomain, number][])
+        .filter(([_, count]) => count > 0)
+        .map(([domain, count]) => ({
+            name: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
+            value: count,
+            color: getDomainStyle(domain),
+        }));
+
+    // Radar chart: weighted domain strength scores
     const domainScores = membersRankMaps.length > 0
         ? teamDomainScores(membersRankMaps, talentsByDomainMap)
         : [];
-    const domainData = domainScores.map(ds => ({
-        name: DOMAIN_LABELS[ds.domain][locale as 'en' | 'pl'],
-        value: Math.max(ds.score, 0.1),
-        score: ds.score,
-        color: getDomainStyle(ds.domain),
-    }));
     const radarData = domainScores.map(ds => ({
         domain: DOMAIN_LABELS[ds.domain][locale as 'en' | 'pl'],
         value: Math.max(0, Math.round(ds.score * 10) / 10),
+        score: ds.score,
         color: getDomainStyle(ds.domain),
     }));
 
@@ -494,28 +506,37 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             {activeTab === 'domains' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                     <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
-                            {tt('domainStrength')}
-                        </h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>
+                                {tt('domainCount')} {showTop10Domains ? tt('top10') : tt('top5')}
+                            </h3>
+                            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-secondary)', padding: 4, borderRadius: 8 }}>
+                                <button
+                                    className={`btn ${!showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
+                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
+                                    onClick={() => setShowTop10Domains(false)}
+                                >
+                                    Top 5
+                                </button>
+                                <button
+                                    className={`btn ${showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
+                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
+                                    onClick={() => setShowTop10Domains(true)}
+                                >
+                                    Top 10
+                                </button>
+                            </div>
+                        </div>
                         {membersWithResults.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RePieChart>
-                                    <Pie data={domainData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                                    <Pie data={domainCountData} dataKey="value" nameKey="name" cx="50%" cy="50%"
                                         outerRadius={100} innerRadius={50} paddingAngle={3} strokeWidth={0}>
-                                        {domainData.map((entry, i) => (
+                                        {domainCountData.map((entry, i) => (
                                             <Cell key={i} fill={entry.color} />
                                         ))}
                                     </Pie>
-                                    <Tooltip content={({ active, payload }: any) => {
-                                        if (!active || !payload?.[0]) return null;
-                                        const p = payload[0].payload;
-                                        return (
-                                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)' }}>
-                                                <div style={{ fontWeight: 600 }}>{p.name}</div>
-                                                <div>{p.score} {tt('pts')}</div>
-                                            </div>
-                                        );
-                                    }} />
+                                    <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
                                     <Legend iconType="circle" />
                                 </RePieChart>
                             </ResponsiveContainer>
@@ -541,7 +562,16 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                     />
                                     <PolarRadiusAxis tick={false} axisLine={false} />
                                     <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
-                                    <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
+                                    <Tooltip content={({ active, payload }: any) => {
+                                        if (!active || !payload?.[0]) return null;
+                                        const p = payload[0].payload;
+                                        return (
+                                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)' }}>
+                                                <div style={{ fontWeight: 600 }}>{p.domain}</div>
+                                                <div>{p.score} {tt('pts')}</div>
+                                            </div>
+                                        );
+                                    }} />
                                 </RadarChart>
                             </ResponsiveContainer>
                         ) : <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No data</p>}
@@ -681,11 +711,11 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                 <div key={member.id} className="glass-card" style={{ padding: 24 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                                         <div>
-                                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{member.name}</h3>
+                                            <h3 style={{ fontSize: 14, fontWeight: 600 }}>{member.name}</h3>
                                             {member.role && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{member.role}</p>}
                                         </div>
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
-                                            <div className={`domain-badge ${topDomain[0]}`}>
+                                            <div className={`domain-badge ${topDomain[0]}`} style={{ fontSize: 10, padding: '3px 8px' }}>
                                                 {DOMAIN_LABELS[topDomain[0] as GallupDomain][locale as 'en' | 'pl']}
                                             </div>
                                             {specialist.isSpecialist && (
