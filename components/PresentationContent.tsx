@@ -55,7 +55,7 @@ export default function PresentationContent({ token }: { token: string }) {
     const [activeBuckets, setActiveBuckets] = useState<Set<RankBucket>>(new Set(['1-5', '6-10']));
     const [hoveredDomain, setHoveredDomain] = useState<GallupDomain | null>(null);
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains' | 'profiles'>('matrix');
-    const [showTop10, setShowTop10] = useState(false);
+    const [showTop10, setShowTop10] = useState(true);
 
     useEffect(() => {
         fetch(`/api/presentations/${token}`)
@@ -489,6 +489,24 @@ export default function PresentationContent({ token }: { token: string }) {
                         ) : <p style={{ color: 'var(--text-secondary)', textAlign: 'center' }}>No data</p>}
                     </div>
 
+                    {/* Team Rank Tag List */}
+                    <div className="glass-card" style={{ padding: 24, gridColumn: '1 / -1' }}>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
+                            {tt('teamRankList')} ({showTop10 ? tt('top10') : tt('top5')})
+                        </h3>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {teamTopN.map(tr => {
+                                const talent = GALLUP_TALENTS.find(t => t.code === tr.talent);
+                                if (!talent) return null;
+                                return (
+                                    <div key={tr.talent} className={`domain-badge ${talent.domain}`} style={{ padding: '6px 14px' }}>
+                                        #{tr.teamRank} {talent[locale as 'en' | 'pl']}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
                     <div className="glass-card" style={{ padding: 24 }}>
                         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{tt('domainStrength')} — Radar</h3>
                         {sourceMembers.length > 0 ? (
@@ -644,21 +662,22 @@ export default function PresentationContent({ token }: { token: string }) {
                                                 <h3 style={{ fontSize: 14, fontWeight: 600 }}>{member.name}</h3>
                                                 {member.role && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{member.role}</p>}
                                             </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                                            <div style={{ position: 'relative', display: 'inline-flex' }}>
                                                 <div className={`domain-badge ${topDomain[0]}`} style={{ fontSize: 10, padding: '3px 8px' }}>
                                                     {DOMAIN_LABELS[topDomain[0] as GallupDomain][locale as 'en' | 'pl']}
                                                 </div>
                                                 {specialist.isSpecialist && (
-                                                    <div style={{
-                                                        display: 'flex', alignItems: 'center', gap: 4,
-                                                        padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
-                                                        background: 'color-mix(in srgb, #f59e0b 15%, transparent)',
-                                                        color: '#f59e0b',
-                                                        border: '1px solid color-mix(in srgb, #f59e0b 25%, transparent)',
-                                                    }}>
-                                                        <Star size={11} />
-                                                        {tt('domainSpecialist')} ({specialist.count}/5)
-                                                    </div>
+                                                    <span
+                                                        title={tt('specialistTooltip')}
+                                                        style={{
+                                                            position: 'absolute', top: -6, right: -8,
+                                                            cursor: 'help',
+                                                            color: getDomainStyle(topDomain[0] as GallupDomain),
+                                                            filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.15))',
+                                                        }}
+                                                    >
+                                                        <Star size={14} fill="currentColor" />
+                                                    </span>
                                                 )}
                                             </div>
                                         </div>

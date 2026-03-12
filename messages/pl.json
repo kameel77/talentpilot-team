@@ -60,6 +60,8 @@
         "spofAlerts": "Krytyczne zależności (SPOF)",
         "spofAlertsDesc": "Talenty, gdzie tylko JEDNA osoba ma je w Top 10 — ryzyko przy odejściu",
         "domainSpecialist": "Specjalista",
+        "specialistTooltip": "Uwaga! 4 z 5 pierwszych talentów mieści się w jednej domenie. Taka osoba może być ekspertem w swojej dziedzinie, ale może potrzebować wsparcia w pozostałych obszarach.",
+        "teamRankList": "Ranga cechy zespołu",
         "ofTeam": "zespołu",
         "soleCarrier": "Jedyna osoba",
         "pts": "pkt",

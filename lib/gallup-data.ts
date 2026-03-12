@@ -48,7 +48,7 @@ export const DOMAIN_LABELS: Record<GallupDomain, { en: string; pl: string }> = {
 export const GALLUP_TALENTS: GallupTalent[] = [
     // Executing
     { code: 'achiever', en: 'Achiever', pl: 'Osiąganie', domain: 'executing' },
-    { code: 'arranger', en: 'Arranger', pl: 'Organizowanie', domain: 'executing' },
+    { code: 'arranger', en: 'Arranger', pl: 'Organizator', domain: 'executing' },
     { code: 'belief', en: 'Belief', pl: 'Pryncypialność', domain: 'executing' },
     { code: 'consistency', en: 'Consistency', pl: 'Bezstronność', domain: 'executing' },
     { code: 'deliberative', en: 'Deliberative', pl: 'Rozwaga', domain: 'executing' },
