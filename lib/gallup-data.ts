@@ -39,7 +39,7 @@ export function getDomainStyle(domain: GallupDomain, opacity: number = 100): str
 }
 
 export const DOMAIN_LABELS: Record<GallupDomain, { en: string; pl: string }> = {
-    executing: { en: 'Executing', pl: 'Realizowanie' },
+    executing: { en: 'Executing', pl: 'Wykonywanie' },
     influencing: { en: 'Influencing', pl: 'Wywieranie wpływu' },
     relationship_building: { en: 'Relationship Building', pl: 'Budowanie relacji' },
     strategic_thinking: { en: 'Strategic Thinking', pl: 'Myślenie strategiczne' },

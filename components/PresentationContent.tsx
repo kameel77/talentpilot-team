@@ -55,8 +55,7 @@ export default function PresentationContent({ token }: { token: string }) {
     const [activeBuckets, setActiveBuckets] = useState<Set<RankBucket>>(new Set(['1-5', '6-10']));
     const [hoveredDomain, setHoveredDomain] = useState<GallupDomain | null>(null);
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains' | 'profiles'>('matrix');
-    const [showTop10Domains, setShowTop10Domains] = useState(false);
-    const [showTop10Profiles, setShowTop10Profiles] = useState(false);
+    const [showTop10, setShowTop10] = useState(false);
 
     useEffect(() => {
         fetch(`/api/presentations/${token}`)
@@ -109,7 +108,7 @@ export default function PresentationContent({ token }: { token: string }) {
     });
 
     // Domain distribution based on visible members team talent order's Top N
-    const teamTopN = teamRanks.filter(tr => tr.teamRank <= (showTop10Domains ? 10 : 5));
+    const teamTopN = teamRanks.filter(tr => tr.teamRank <= (showTop10 ? 10 : 5));
     const domainCounts: Record<GallupDomain, number> = {
         executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
     };
@@ -129,17 +128,15 @@ export default function PresentationContent({ token }: { token: string }) {
 
     // Radar data per domain based on visible members
     const radarData = (Object.keys(DOMAIN_LABELS) as GallupDomain[]).map(domain => {
-        const avg = sourceMembers.length > 0
+        const count = sourceMembers.length > 0
             ? sourceMembers.reduce((sum, m) => {
-                const domainTalents = m.results.filter(r => r.domain === domain);
-                const avgRank = domainTalents.length > 0
-                    ? domainTalents.reduce((s, r) => s + r.rank, 0) / domainTalents.length : 34;
-                return sum + (35 - avgRank); // invert so higher is better
+                const inTopN = m.results.filter(r => r.domain === domain && r.rank <= (showTop10 ? 10 : 5));
+                return sum + inTopN.length;
             }, 0) / sourceMembers.length
             : 0;
         return {
             domain: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
-            value: Math.round(avg * 10) / 10,
+            value: Math.round(count * 10) / 10, // Average occurrences per person in Top N
             color: getDomainStyle(domain),
         };
     });
@@ -193,7 +190,7 @@ export default function PresentationContent({ token }: { token: string }) {
             </div>
 
             {/* Tab navigation */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 24, padding: '0 24px' }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 24, padding: '0 24px', alignItems: 'center' }}>
                 {[
                     { key: 'matrix' as const, icon: Grid3x3, label: tt('matrix') },
                     { key: 'domains' as const, icon: PieChartIcon, label: tt('domains') },
@@ -214,6 +211,26 @@ export default function PresentationContent({ token }: { token: string }) {
                         <Icon size={16} /> {label}
                     </button>
                 ))}
+
+                {/* Global Top 5/10 Toggle (visible for Domains and Profiles) */}
+                {(activeTab === 'domains' || activeTab === 'profiles') && (
+                    <div style={{ marginLeft: 'auto', display: 'flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 8, border: '1px solid var(--border-color)' }}>
+                        <button
+                            className={`btn ${!showTop10 ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ padding: '4px 12px', fontSize: 13, minHeight: 0, height: 32 }}
+                            onClick={() => setShowTop10(false)}
+                        >
+                            Top 5
+                        </button>
+                        <button
+                            className={`btn ${showTop10 ? 'btn-primary' : 'btn-ghost'}`}
+                            style={{ padding: '4px 12px', fontSize: 13, minHeight: 0, height: 32 }}
+                            onClick={() => setShowTop10(true)}
+                        >
+                            Top 10
+                        </button>
+                    </div>
+                )}
             </div>
 
             {activeTab === 'matrix' && (
@@ -442,27 +459,9 @@ export default function PresentationContent({ token }: { token: string }) {
             {activeTab === 'domains' && (
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 20, padding: '0 24px' }}>
                     <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>
-                                {tt('domains')} ({showTop10Domains ? tt('top10') : tt('top5')})
-                            </h3>
-                            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-secondary)', padding: 4, borderRadius: 8 }}>
-                                <button
-                                    className={`btn ${!showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
-                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
-                                    onClick={() => setShowTop10Domains(false)}
-                                >
-                                    Top 5
-                                </button>
-                                <button
-                                    className={`btn ${showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
-                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
-                                    onClick={() => setShowTop10Domains(true)}
-                                >
-                                    Top 10
-                                </button>
-                            </div>
-                        </div>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
+                            {tt('domains')} ({showTop10 ? tt('top10') : tt('top5')})
+                        </h3>
                         {sourceMembers.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RePieChart>
@@ -480,7 +479,7 @@ export default function PresentationContent({ token }: { token: string }) {
                     </div>
 
                     <div className="glass-card" style={{ padding: 24 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Team Domain Radar</h3>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Team Domain Radar ({showTop10 ? 'Top 10' : 'Top 5'})</h3>
                         {sourceMembers.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
@@ -531,27 +530,9 @@ export default function PresentationContent({ token }: { token: string }) {
             {
                 activeTab === 'profiles' && (
                     <div style={{ padding: '0 24px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-                            <div style={{ display: 'inline-flex', gap: 4, background: 'var(--bg-card)', padding: 4, borderRadius: 8, border: '1px solid var(--border-color)' }}>
-                                <button
-                                    className={`btn ${!showTop10Profiles ? 'btn-primary' : 'btn-ghost'}`}
-                                    style={{ padding: '4px 12px', fontSize: 13, minHeight: 0, height: 32 }}
-                                    onClick={() => setShowTop10Profiles(false)}
-                                >
-                                    Top 5
-                                </button>
-                                <button
-                                    className={`btn ${showTop10Profiles ? 'btn-primary' : 'btn-ghost'}`}
-                                    style={{ padding: '4px 12px', fontSize: 13, minHeight: 0, height: 32 }}
-                                    onClick={() => setShowTop10Profiles(true)}
-                                >
-                                    Top 10
-                                </button>
-                            </div>
-                        </div>
                         <div className="cards-grid">
                             {displayMembers.map(member => {
-                                const topN = member.results.filter(r => r.rank <= (showTop10Profiles ? 10 : 5));
+                                const topN = member.results.filter(r => r.rank <= (showTop10 ? 10 : 5));
                                 const domainProfile: Record<GallupDomain, number> = {
                                     executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
                                 };
@@ -575,7 +556,7 @@ export default function PresentationContent({ token }: { token: string }) {
 
                                         <div style={{ marginBottom: 16 }}>
                                             <p style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                                                {showTop10Profiles ? tt('top10') : tt('top5')}
+                                                {showTop10 ? tt('top10') : tt('top5')}
                                             </p>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                                 {topN.map(r => {
