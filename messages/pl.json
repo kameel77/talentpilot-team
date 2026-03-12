@@ -53,7 +53,18 @@
         "top10": "TOP 10 talentów",
         "top10Summary": "Top 10",
         "teamRow": "Zespół",
-        "teamRank": "Ranga zespołu"
+        "teamRank": "Ranga zespołu",
+        "domainStrength": "Siła domen",
+        "teamWeaknesses": "Luki zespołowe",
+        "teamWeaknessesDesc": "Talenty w Bottom 5 u znacznej części zespołu — obszary kosztujące zespół energię",
+        "spofAlerts": "Krytyczne zależności (SPOF)",
+        "spofAlertsDesc": "Talenty, gdzie tylko JEDNA osoba ma je w Top 10 — ryzyko przy odejściu",
+        "domainSpecialist": "Specjalista",
+        "ofTeam": "zespołu",
+        "soleCarrier": "jedyny nosiciel",
+        "pts": "pkt",
+        "noWeaknesses": "Brak istotnych luk — zespół ma dobre pokrycie talentów",
+        "noSpof": "Brak krytycznych zależności — talenty są dobrze rozproszone"
     },
     "Presentation": {
         "title": "Prezentacja wyników",

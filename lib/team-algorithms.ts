@@ -207,3 +207,190 @@ export function teamTalentRanks(
         buckets: item.buckets,
     }));
 }
+
+// ─── 4. Weighted Talent Score ───────────────────────────────────────────
+
+/**
+ * Convert a Gallup rank (1-34) to a weighted point score.
+ * Top 5 are heavily weighted, Bottom 5 incur penalties.
+ */
+export function talentScore(rank: number): number {
+    if (rank <= 5) return 10 - (rank - 1);           // 10, 9, 8, 7, 6
+    if (rank <= 10) return 5 - (rank - 6) * 0.8;     // 5.0, 4.2, 3.4, 2.6, 1.8
+    if (rank <= 29) return 0;                          // neutral
+    return -(rank - 29);                               // -1, -2, -3, -4, -5
+}
+
+// ─── 5. Team Domain Scores (weighted) ───────────────────────────────────
+
+export interface DomainScoreResult {
+    domain: GallupDomain;
+    score: number;
+    maxPossible: number;
+    percentage: number;     // score as % of max possible
+}
+
+/**
+ * Calculate team domain strength using the weighted point system.
+ * Each member's talent ranks are converted to points, then summed per domain.
+ * This creates clear differentiation even for large teams.
+ */
+export function teamDomainScores(
+    membersRankMaps: MemberRankMap[],
+    talentsByDomain: Record<GallupDomain, string[]>,
+): DomainScoreResult[] {
+    if (membersRankMaps.length === 0) return [];
+
+    const domains = DOMAIN_ORDER;
+
+    const results = domains.map(domain => {
+        const talentCodes = talentsByDomain[domain];
+        let totalScore = 0;
+
+        for (const memberMap of membersRankMaps) {
+            for (const talent of talentCodes) {
+                const rank = memberMap[talent];
+                if (rank !== undefined) {
+                    totalScore += talentScore(rank);
+                }
+            }
+        }
+
+        // Max possible: every member has every domain talent in positions 1-N
+        const maxPossible = membersRankMaps.length * talentCodes.reduce((sum, _, i) =>
+            sum + talentScore(Math.min(i + 1, 5)), 0);
+
+        return {
+            domain,
+            score: Math.round(totalScore * 10) / 10,
+            maxPossible: Math.round(maxPossible * 10) / 10,
+            percentage: maxPossible > 0
+                ? Math.round((totalScore / maxPossible) * 100)
+                : 0,
+        };
+    });
+
+    return results;
+}
+
+// ─── 6. Team Weaknesses (merged Blind Spots + Basement) ─────────────────
+
+export interface TeamWeaknessResult {
+    talentCode: string;
+    bottomCount: number;     // how many members have rank 30-34
+    totalMembers: number;
+    percentage: number;      // % of team with this in bottom 5
+}
+
+/**
+ * Find team weaknesses: talents that appear in the Bottom 5 (rank 30-34)
+ * for a significant portion of the team.
+ *
+ * @param threshold Minimum fraction of team (0-1) that must have in bottom 5
+ */
+export function findTeamWeaknesses(
+    membersRankMaps: MemberRankMap[],
+    talentCodes: string[],
+    threshold: number = 0.3,
+): TeamWeaknessResult[] {
+    const totalMembers = membersRankMaps.length;
+    if (totalMembers === 0) return [];
+
+    return talentCodes
+        .map(talent => {
+            const bottomCount = membersRankMaps.filter(m => {
+                const rank = m[talent];
+                return rank !== undefined && rank >= 30;
+            }).length;
+            return {
+                talentCode: talent,
+                bottomCount,
+                totalMembers,
+                percentage: Math.round((bottomCount / totalMembers) * 100),
+            };
+        })
+        .filter(r => r.bottomCount / totalMembers >= threshold)
+        .sort((a, b) => b.percentage - a.percentage);
+}
+
+// ─── 7. Single Point of Failure (SPOF) ─────────────────────────────────
+
+export interface SPOFResult {
+    talentCode: string;
+    memberIndex: number;     // index in membersRankMaps of the sole carrier
+    memberRank: number;      // their rank for this talent
+}
+
+/**
+ * Detect talents that only ONE person in the team has in their Top 10.
+ * These are critical dependencies — if that person leaves, the capability is lost.
+ */
+export function findSPOF(
+    membersRankMaps: MemberRankMap[],
+    talentCodes: string[],
+): SPOFResult[] {
+    return talentCodes
+        .map(talent => {
+            const carriers: { index: number; rank: number }[] = [];
+            membersRankMaps.forEach((m, i) => {
+                const rank = m[talent];
+                if (rank !== undefined && rank <= 10) {
+                    carriers.push({ index: i, rank });
+                }
+            });
+            if (carriers.length === 1) {
+                return {
+                    talentCode: talent,
+                    memberIndex: carriers[0].index,
+                    memberRank: carriers[0].rank,
+                };
+            }
+            return null;
+        })
+        .filter((r): r is SPOFResult => r !== null)
+        .sort((a, b) => a.memberRank - b.memberRank);
+}
+
+// ─── 8. Domain Specialist ───────────────────────────────────────────────
+
+export interface DomainSpecialistResult {
+    isSpecialist: boolean;
+    specialistDomain: GallupDomain | null;
+    count: number;           // how many of top 5 are in the specialist domain
+}
+
+/**
+ * Check if a member is a "Domain Specialist" — has 4 or more of their
+ * Top 5 talents in a single domain.
+ */
+export function checkDomainSpecialist(
+    memberRankMap: MemberRankMap,
+    talentCodes: string[],
+    talentDomainMap: Record<string, GallupDomain>,
+): DomainSpecialistResult {
+    // Get top 5 talents by rank
+    const top5 = talentCodes
+        .filter(t => memberRankMap[t] !== undefined)
+        .sort((a, b) => memberRankMap[a] - memberRankMap[b])
+        .slice(0, 5);
+
+    const domainCounts: Record<GallupDomain, number> = {
+        executing: 0, influencing: 0,
+        relationship_building: 0, strategic_thinking: 0,
+    };
+
+    top5.forEach(talent => {
+        const domain = talentDomainMap[talent];
+        if (domain) domainCounts[domain]++;
+    });
+
+    const entries = Object.entries(domainCounts)
+        .sort((a, b) => b[1] - a[1]);
+    const [bestDomain, bestCount] = entries[0];
+
+    return {
+        isSpecialist: bestCount >= 4,
+        specialistDomain: bestCount >= 4 ? bestDomain as GallupDomain : null,
+        count: bestCount,
+    };
+}

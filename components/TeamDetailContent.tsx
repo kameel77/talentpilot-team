@@ -3,12 +3,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useApi } from '@/lib/auth-context';
-import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, type GallupDomain } from '@/lib/gallup-data';
-import { teamTalentRanks, dominantDomain } from '@/lib/team-algorithms';
+import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, type GallupDomain, getTalentsByDomain } from '@/lib/gallup-data';
+import { teamTalentRanks, dominantDomain, teamDomainScores, findTeamWeaknesses, findSPOF, checkDomainSpecialist } from '@/lib/team-algorithms';
 import {
     Plus, Upload, ArrowLeft, Trash2, UserPlus, X,
     BarChart3, Grid3x3, PieChart, Edit2, Check,
-    ChevronDown, ExternalLink, Presentation
+    ChevronDown, ExternalLink, Presentation, AlertTriangle, Star, TrendingDown, ShieldAlert
 } from 'lucide-react';
 import {
     PieChart as RePieChart, Pie, Cell, ResponsiveContainer,
@@ -235,24 +235,41 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const teamRankMap: Record<string, number> = {};
     teamRanks.forEach(tr => { teamRankMap[tr.talent] = tr.teamRank; });
 
-    // Domain distribution based on team talent order's Top N
-    const teamTopN = teamRanks.filter(tr => tr.teamRank <= (showTop10Domains ? 10 : 5));
-    const domainCounts: Record<GallupDomain, number> = {
-        executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
+    // Talent lookup maps
+    const talentDomainMap: Record<string, GallupDomain> = {};
+    GALLUP_TALENTS.forEach(t => { talentDomainMap[t.code] = t.domain; });
+    const talentsByDomainMap: Record<GallupDomain, string[]> = {
+        executing: getTalentsByDomain('executing').map(t => t.code),
+        influencing: getTalentsByDomain('influencing').map(t => t.code),
+        relationship_building: getTalentsByDomain('relationship_building').map(t => t.code),
+        strategic_thinking: getTalentsByDomain('strategic_thinking').map(t => t.code),
     };
-    teamTopN.forEach(tr => {
-        const talent = GALLUP_TALENTS.find(t => t.code === tr.talent);
-        if (talent) {
-            domainCounts[talent.domain]++;
-        }
-    });
-    const domainData = (Object.entries(domainCounts) as [GallupDomain, number][])
-        .filter(([_, count]) => count > 0)
-        .map(([domain, count]) => ({
-            name: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
-            value: count,
-            color: getDomainStyle(domain),
-        }));
+
+    // P0: Domain strength scores (weighted)
+    const domainScores = membersRankMaps.length > 0
+        ? teamDomainScores(membersRankMaps, talentsByDomainMap)
+        : [];
+    const domainData = domainScores.map(ds => ({
+        name: DOMAIN_LABELS[ds.domain][locale as 'en' | 'pl'],
+        value: Math.max(ds.score, 0.1),
+        score: ds.score,
+        color: getDomainStyle(ds.domain),
+    }));
+    const radarData = domainScores.map(ds => ({
+        domain: DOMAIN_LABELS[ds.domain][locale as 'en' | 'pl'],
+        value: Math.max(0, Math.round(ds.score * 10) / 10),
+        color: getDomainStyle(ds.domain),
+    }));
+
+    // P1: Team weaknesses
+    const teamWeaknesses = membersRankMaps.length > 0
+        ? findTeamWeaknesses(membersRankMaps, talentCodes)
+        : [];
+
+    // P1: SPOF detection
+    const spofList = membersRankMaps.length > 0
+        ? findSPOF(membersRankMaps, talentCodes)
+        : [];
 
     // Top talents summary
     const talentTop10Counts: Record<string, number> = {};
@@ -260,23 +277,6 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         m.results.filter(r => r.rank <= 10).forEach(r => {
             talentTop10Counts[r.talent] = (talentTop10Counts[r.talent] || 0) + 1;
         });
-    });
-
-    // Radar data per domain
-    const radarData = (Object.keys(DOMAIN_LABELS) as GallupDomain[]).map(domain => {
-        const avg = membersWithResults.length > 0
-            ? membersWithResults.reduce((sum, m) => {
-                const domainTalents = m.results.filter(r => r.domain === domain);
-                const avgRank = domainTalents.length > 0
-                    ? domainTalents.reduce((s, r) => s + r.rank, 0) / domainTalents.length : 34;
-                return sum + (35 - avgRank); // invert so higher is better
-            }, 0) / membersWithResults.length
-            : 0;
-        return {
-            domain: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
-            value: Math.round(avg * 10) / 10,
-            color: getDomainStyle(domain),
-        };
     });
 
     return (
@@ -494,27 +494,9 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             {activeTab === 'domains' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                     <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>
-                                {tt('domains')} ({showTop10Domains ? tt('top10') : tt('top5')})
-                            </h3>
-                            <div style={{ display: 'flex', gap: 4, background: 'var(--bg-secondary)', padding: 4, borderRadius: 8 }}>
-                                <button
-                                    className={`btn ${!showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
-                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
-                                    onClick={() => setShowTop10Domains(false)}
-                                >
-                                    Top 5
-                                </button>
-                                <button
-                                    className={`btn ${showTop10Domains ? 'btn-primary' : 'btn-ghost'}`}
-                                    style={{ padding: '4px 12px', fontSize: 12, minHeight: 0, height: 28 }}
-                                    onClick={() => setShowTop10Domains(true)}
-                                >
-                                    Top 10
-                                </button>
-                            </div>
-                        </div>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
+                            {tt('domainStrength')}
+                        </h3>
                         {membersWithResults.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RePieChart>
@@ -524,7 +506,16 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             <Cell key={i} fill={entry.color} />
                                         ))}
                                     </Pie>
-                                    <Tooltip contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, color: 'var(--text-primary)' }} />
+                                    <Tooltip content={({ active, payload }: any) => {
+                                        if (!active || !payload?.[0]) return null;
+                                        const p = payload[0].payload;
+                                        return (
+                                            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)' }}>
+                                                <div style={{ fontWeight: 600 }}>{p.name}</div>
+                                                <div>{p.score} {tt('pts')}</div>
+                                            </div>
+                                        );
+                                    }} />
                                     <Legend iconType="circle" />
                                 </RePieChart>
                             </ResponsiveContainer>
@@ -532,7 +523,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                     </div>
 
                     <div className="glass-card" style={{ padding: 24 }}>
-                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>Team Domain Radar</h3>
+                        <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{tt('domainStrength')} — Radar</h3>
                         {membersWithResults.length > 0 ? (
                             <ResponsiveContainer width="100%" height={300}>
                                 <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
@@ -576,6 +567,76 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                 })}
                         </div>
                     </div>
+
+                    {/* P1: Team Weaknesses */}
+                    <div className="glass-card" style={{ padding: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <TrendingDown size={18} style={{ color: '#ef4444' }} />
+                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{tt('teamWeaknesses')}</h3>
+                        </div>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                            {tt('teamWeaknessesDesc')}
+                        </p>
+                        {teamWeaknesses.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                                {teamWeaknesses.slice(0, 10).map(w => {
+                                    const talent = GALLUP_TALENTS.find(t => t.code === w.talentCode);
+                                    if (!talent) return null;
+                                    return (
+                                        <div key={w.talentCode} style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                            <div style={{ flex: '0 0 130px', fontSize: 13, fontWeight: 600, color: getDomainStyle(talent.domain) }}>
+                                                {talent[locale as 'en' | 'pl']}
+                                            </div>
+                                            <div style={{ flex: 1, height: 8, borderRadius: 4, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+                                                <div style={{ width: `${w.percentage}%`, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, #ef4444, #dc2626)' }} />
+                                            </div>
+                                            <div style={{ flex: '0 0 70px', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'right' }}>
+                                                {w.percentage}% {tt('ofTeam')}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>✅ {tt('noWeaknesses')}</p>}
+                    </div>
+
+                    {/* P1: SPOF Alerts */}
+                    <div className="glass-card" style={{ padding: 24 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                            <ShieldAlert size={18} style={{ color: '#f59e0b' }} />
+                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{tt('spofAlerts')}</h3>
+                        </div>
+                        <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                            {tt('spofAlertsDesc')}
+                        </p>
+                        {spofList.length > 0 ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {spofList.slice(0, 10).map(spof => {
+                                    const talent = GALLUP_TALENTS.find(t => t.code === spof.talentCode);
+                                    const carrier = membersWithResults[spof.memberIndex];
+                                    if (!talent || !carrier) return null;
+                                    return (
+                                        <div key={spof.talentCode} style={{
+                                            display: 'flex', alignItems: 'center', gap: 12,
+                                            padding: '8px 12px', borderRadius: 8,
+                                            background: 'color-mix(in srgb, #f59e0b 8%, transparent)',
+                                            border: '1px solid color-mix(in srgb, #f59e0b 20%, transparent)',
+                                        }}>
+                                            <AlertTriangle size={16} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ fontSize: 13, fontWeight: 600, color: getDomainStyle(talent.domain) }}>
+                                                    {talent[locale as 'en' | 'pl']}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                                    {tt('soleCarrier')}: {carrier.name} (#{spof.memberRank})
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>✅ {tt('noSpof')}</p>}
+                    </div>
                 </div>
             )}
 
@@ -611,6 +672,11 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                             });
                             const topDomain = Object.entries(domainProfile).sort((a, b) => b[1] - a[1])[0];
 
+                            // Domain Specialist check
+                            const memberRM: Record<string, number> = {};
+                            member.results.forEach(r => { memberRM[r.talent] = r.rank; });
+                            const specialist = checkDomainSpecialist(memberRM, talentCodes, talentDomainMap);
+
                             return (
                                 <div key={member.id} className="glass-card" style={{ padding: 24 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -618,8 +684,22 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             <h3 style={{ fontSize: 16, fontWeight: 600 }}>{member.name}</h3>
                                             {member.role && <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{member.role}</p>}
                                         </div>
-                                        <div className={`domain-badge ${topDomain[0]}`}>
-                                            {DOMAIN_LABELS[topDomain[0] as GallupDomain][locale as 'en' | 'pl']}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-end' }}>
+                                            <div className={`domain-badge ${topDomain[0]}`}>
+                                                {DOMAIN_LABELS[topDomain[0] as GallupDomain][locale as 'en' | 'pl']}
+                                            </div>
+                                            {specialist.isSpecialist && (
+                                                <div style={{
+                                                    display: 'flex', alignItems: 'center', gap: 4,
+                                                    padding: '2px 8px', borderRadius: 6, fontSize: 11, fontWeight: 600,
+                                                    background: 'color-mix(in srgb, #f59e0b 15%, transparent)',
+                                                    color: '#f59e0b',
+                                                    border: '1px solid color-mix(in srgb, #f59e0b 25%, transparent)',
+                                                }}>
+                                                    <Star size={11} />
+                                                    {tt('domainSpecialist')} ({specialist.count}/5)
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
