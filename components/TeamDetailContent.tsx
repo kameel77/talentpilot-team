@@ -54,6 +54,9 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [membersExpanded, setMembersExpanded] = useState(false);
     const [showTop10Domains, setShowTop10Domains] = useState(true);
     const [showTop10Profiles, setShowTop10Profiles] = useState(true);
+    const [editingMember, setEditingMember] = useState<{ id: string, name: string, email: string, role: string } | null>(null);
+    const [editingTalent, setEditingTalent] = useState<{ memberId: string, talentCode: string, currentRank?: number | null, domain: string } | null>(null);
+    const [talentRankInput, setTalentRankInput] = useState('');
 
     const fetchTeam = useCallback(async () => {
         const res = await apiFetch(`/api/teams/${teamId}`);
@@ -78,6 +81,34 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const deleteMember = async (id: string) => {
         if (!confirm('Delete this member?')) return;
         await apiFetch(`/api/members/${id}`, { method: 'DELETE' });
+        fetchTeam();
+    };
+
+    const handleEditMemberSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingMember) return;
+        await apiFetch(`/api/members/${editingMember.id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ name: editingMember.name, email: editingMember.email, role: editingMember.role }),
+        });
+        setEditingMember(null);
+        fetchTeam();
+    };
+
+    const handleEditTalentSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTalent) return;
+        const rank = parseInt(talentRankInput, 10);
+        if (isNaN(rank) || rank < 1 || rank > 34) {
+            alert('Rank must be between 1 and 34');
+            return;
+        }
+        await apiFetch(`/api/members/${editingTalent.memberId}/talents`, {
+            method: 'PUT',
+            body: JSON.stringify({ talentCode: editingTalent.talentCode, rank, domain: editingTalent.domain }),
+        });
+        setEditingTalent(null);
+        setTalentRankInput('');
         fetchTeam();
     };
 
@@ -405,24 +436,33 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                                 </td>
                                                 {GALLUP_TALENTS.map(talent => {
                                                     const rank = rankMap[talent.code];
-                                                    if (!rank) return <td key={talent.code} style={{ textAlign: 'center' }}>-</td>;
+                                                    const isMissing = !rank;
 
-                                                    const bg = rank >= 30
-                                                        ? 'var(--text-secondary)'
+                                                    const bg = isMissing ? 'transparent'
+                                                        : rank >= 30 ? 'var(--text-secondary)'
                                                         : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 10 ? 75 : 20);
-                                                    const textColor = rank >= 30
-                                                        ? 'var(--bg-primary)'
+                                                    const textColor = isMissing ? 'var(--text-secondary)'
+                                                        : rank >= 30 ? 'var(--bg-primary)'
                                                         : rank <= 10 ? '#fff' : 'var(--text-primary)';
 
                                                     return (
-                                                        <td key={talent.code} style={{ textAlign: 'center', padding: '4px 2px' }}>
-                                                            <div className="talent-cell" style={{
+                                                        <td 
+                                                            key={talent.code} 
+                                                            style={{ textAlign: 'center', padding: '4px 2px', cursor: 'pointer' }}
+                                                            onClick={() => {
+                                                                setEditingTalent({ memberId: member.id, talentCode: talent.code, currentRank: rank, domain: talent.domain });
+                                                                setTalentRankInput(rank ? rank.toString() : '');
+                                                            }}
+                                                            title={isMissing ? t('addTalentClick') || "Click to add talent number" : t('editTalentClick') || "Click to edit talent number"}
+                                                        >
+                                                            <div className="talent-cell hover-scale" style={{
                                                                 background: bg,
                                                                 color: textColor,
                                                                 margin: '0 auto',
-                                                                fontWeight: rank <= 10 || rank >= 30 ? 700 : 500,
+                                                                fontWeight: (rank && (rank <= 10 || rank >= 30)) ? 700 : 500,
+                                                                border: isMissing ? '1px dashed var(--border-color)' : 'none',
                                                             }}>
-                                                                {rank}
+                                                                {isMissing ? '+' : rank}
                                                             </div>
                                                         </td>
                                                     );
@@ -853,7 +893,18 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                             />
                                         )}
                                     </td>
-                                    <td style={{ fontWeight: 500 }}>{member.name}</td>
+                                    <td style={{ fontWeight: 500 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} className="member-name-row">
+                                            <span>{member.name}</span>
+                                            <button 
+                                                className="btn btn-ghost edit-member-icon" 
+                                                style={{ padding: 4, height: 'auto', minHeight: 0, opacity: 0, transition: 'opacity 0.2s' }}
+                                                onClick={() => setEditingMember({ id: member.id, name: member.name, email: member.email || '', role: member.role || '' })}
+                                            >
+                                                <Edit2 size={14} />
+                                            </button>
+                                        </div>
+                                    </td>
                                     <td style={{ color: 'var(--text-secondary)' }}>{member.role || '—'}</td>
                                     <td>
                                         {member.results.length > 0 ? (
@@ -921,6 +972,85 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                     </div>
                 </div>
             )}
+
+            {/* Edit member modal */}
+            {editingMember && (
+                <div className="modal-overlay" onClick={() => setEditingMember(null)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 className="modal-title">{t('edit') || 'Edit Member'}</h2>
+                            <button onClick={() => setEditingMember(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                        </div>
+                        <form onSubmit={handleEditMemberSubmit}>
+                            <div style={{ marginBottom: 16 }}>
+                                <label className="label">{t('name')} *</label>
+                                <input className="input" value={editingMember.name} onChange={e => setEditingMember({ ...editingMember, name: e.target.value })} required />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                                <div>
+                                    <label className="label">{t('email')}</label>
+                                    <input className="input" type="email" value={editingMember.email} onChange={e => setEditingMember({ ...editingMember, email: e.target.value })} />
+                                </div>
+                                <div>
+                                    <label className="label">{t('role')}</label>
+                                    <input className="input" value={editingMember.role} onChange={e => setEditingMember({ ...editingMember, role: e.target.value })} />
+                                </div>
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="btn btn-ghost" onClick={() => setEditingMember(null)}>{tc('cancel')}</button>
+                                <button type="submit" className="btn btn-primary">{tc('save')}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit talent modal */}
+            {editingTalent && (
+                <div className="modal-overlay" onClick={() => setEditingTalent(null)}>
+                    <div className="modal-content" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h2 className="modal-title">
+                                {tt('editTalent') || 'Edit Talent Number'}
+                            </h2>
+                            <button onClick={() => setEditingTalent(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                        </div>
+                        <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
+                            {GALLUP_TALENTS.find(t => t.code === editingTalent.talentCode)?.[locale as 'en' | 'pl']}
+                        </p>
+                        <form onSubmit={handleEditTalentSubmit}>
+                            <div style={{ marginBottom: 16 }}>
+                                <label className="label">{tt('rank') || 'Rank (1-34)'} *</label>
+                                <input 
+                                    className="input" 
+                                    type="number" 
+                                    min="1" 
+                                    max="34" 
+                                    value={talentRankInput} 
+                                    onChange={e => setTalentRankInput(e.target.value)} 
+                                    required 
+                                    autoFocus
+                                />
+                            </div>
+                            <div className="modal-actions">
+                                <button type="button" className="btn btn-ghost" onClick={() => setEditingTalent(null)}>{tc('cancel')}</button>
+                                <button type="submit" className="btn btn-primary">{tc('save')}</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            <style jsx>{`
+                .member-name-row:hover .edit-member-icon {
+                    opacity: 1 !important;
+                }
+                .hover-scale {
+                    transition: transform 0.2s;
+                }
+                .hover-scale:hover {
+                    transform: scale(1.1);
+                }
+            `}</style>
         </div>
     );
 }
