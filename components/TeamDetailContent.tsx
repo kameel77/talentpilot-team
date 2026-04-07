@@ -89,10 +89,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         try {
             const fd = new FormData();
             fd.append('file', file);
-            const res = await fetch('/api/gallup/parse', {
-                method: 'POST',
-                body: fd,
-            });
+            const res = await apiUpload('/api/gallup/parse', fd);
             if (res.ok) {
                 const data = await res.json();
                 if (data.person?.first_name || data.person?.last_name) {
