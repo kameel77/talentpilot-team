@@ -42,14 +42,40 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ message: 'Members created', count: validMembers.length }, { status: 201 });
     }
 
-    const { name, email, role, teamId } = body;
+    const { name, email, role, teamId, talents } = body;
 
     if (!name || !teamId) {
         return NextResponse.json({ error: 'Name and teamId are required' }, { status: 400 });
     }
 
+    let resultsData = undefined;
+    if (talents && Array.isArray(talents) && talents.length > 0) {
+        resultsData = {
+            create: talents.map((t: any) => {
+                const domainMap: Record<number, string> = {
+                    1: 'executing',
+                    2: 'influencing',
+                    3: 'relationship_building',
+                    4: 'strategic_thinking',
+                };
+                return {
+                    rank: t.rank,
+                    talent: t.talent,
+                    // If talent comes from external API it has domain.number, if it comes ready mapped or differently we fallback
+                    domain: (t.domain && t.domain.number) ? (domainMap[t.domain.number] || 'executing') : (t.domain || 'executing'),
+                };
+            })
+        };
+    }
+
     const member = await prisma.member.create({
-        data: { name, email, role, teamId },
+        data: { 
+            name, 
+            email, 
+            role, 
+            teamId,
+            results: resultsData 
+        },
         include: { results: true },
     });
 

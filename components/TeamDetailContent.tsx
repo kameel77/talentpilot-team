@@ -45,6 +45,9 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [loading, setLoading] = useState(true);
     const [showAddMember, setShowAddMember] = useState(false);
     const [memberForm, setMemberForm] = useState({ name: '', email: '', role: '' });
+    const [parsedTalents, setParsedTalents] = useState<{ talent: string, rank: number, domain: string }[] | null>(null);
+    const [parsingPdf, setParsingPdf] = useState(false);
+    const addMemberPdfInputRef = useRef<HTMLInputElement>(null);
     const [uploadingFor, setUploadingFor] = useState<string | null>(null);
     const [uploadStatus, setUploadStatus] = useState<string | null>(null);
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains' | 'profiles'>('matrix');
@@ -71,11 +74,45 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         e.preventDefault();
         await apiFetch('/api/members', {
             method: 'POST',
-            body: JSON.stringify({ ...memberForm, teamId }),
+            body: JSON.stringify({ ...memberForm, teamId, talents: parsedTalents }),
         });
         setShowAddMember(false);
         setMemberForm({ name: '', email: '', role: '' });
+        setParsedTalents(null);
         fetchTeam();
+    };
+
+    const handleParseGallup = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setParsingPdf(true);
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/gallup/parse', {
+                method: 'POST',
+                body: fd,
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.person?.first_name || data.person?.last_name) {
+                    setMemberForm(prev => ({
+                        ...prev,
+                        name: `${data.person.first_name || ''} ${data.person.last_name || ''}`.trim()
+                    }));
+                }
+                if (data.talents) {
+                    setParsedTalents(data.talents);
+                }
+            } else {
+                alert(t('error'));
+            }
+        } catch {
+             alert(t('error'));
+        } finally {
+            setParsingPdf(false);
+            if (addMemberPdfInputRef.current) addMemberPdfInputRef.current.value = '';
+        }
     };
 
     const deleteMember = async (id: string) => {
@@ -943,13 +980,21 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
 
             {/* Add member modal */}
             {showAddMember && (
-                <div className="modal-overlay" onClick={() => setShowAddMember(false)}>
+                <div className="modal-overlay" onClick={() => { setShowAddMember(false); setParsedTalents(null); }}>
                     <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h2 className="modal-title">{t('add')}</h2>
-                            <button onClick={() => setShowAddMember(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+                            <button onClick={() => { setShowAddMember(false); setParsedTalents(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
                         </div>
                         <form onSubmit={addMember}>
+                            <div style={{ marginBottom: 16, padding: '16px', borderRadius: '8px', border: '1px dashed var(--border-color)', background: 'var(--bg-card)', textAlign: 'center' }}>
+                                <input type="file" accept="application/pdf" ref={addMemberPdfInputRef} style={{ display: 'none' }} onChange={handleParseGallup} />
+                                <button type="button" className="btn btn-ghost" style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: '8px', height: '40px', alignItems: 'center' }} onClick={() => addMemberPdfInputRef.current?.click()} disabled={parsingPdf}>
+                                    {parsingPdf ? <div style={{ width: 16, height: 16, border: '2px solid var(--text-secondary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} /> : <Upload size={16} />}
+                                    {parsingPdf ? t('processing') : t('uploadGallup')}
+                                </button>
+                                {parsedTalents && parsedTalents.length > 0 && <p style={{ fontSize: 13, color: 'var(--success)', marginTop: 12 }}>✓ {parsedTalents.length} talents extracted successfully</p>}
+                            </div>
                             <div style={{ marginBottom: 16 }}>
                                 <label className="label">{t('name')} *</label>
                                 <input className="input" value={memberForm.name} onChange={e => setMemberForm({ ...memberForm, name: e.target.value })} required />
@@ -965,7 +1010,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                 </div>
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn btn-ghost" onClick={() => setShowAddMember(false)}>{tc('cancel')}</button>
+                                <button type="button" className="btn btn-ghost" onClick={() => { setShowAddMember(false); setParsedTalents(null); }}>{tc('cancel')}</button>
                                 <button type="submit" className="btn btn-primary">{tc('save')}</button>
                             </div>
                         </form>
