@@ -40,6 +40,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const { apiFetch, apiUpload } = useApi();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const csvInputRef = useRef<HTMLInputElement>(null);
+    const pdfImportRef = useRef<HTMLInputElement>(null);
 
     const [team, setTeam] = useState<TeamData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -50,6 +51,11 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const addMemberPdfInputRef = useRef<HTMLInputElement>(null);
     const [uploadingFor, setUploadingFor] = useState<string | null>(null);
     const [uploadStatus, setUploadStatus] = useState<string | null>(null);
+
+    type PdfImportStatus = 'pending' | 'processing' | 'success' | 'error';
+    type PdfImportItem = { fileName: string; name: string | null; status: PdfImportStatus; error?: string };
+    const [pdfImportItems, setPdfImportItems] = useState<PdfImportItem[]>([]);
+    const [showPdfImport, setShowPdfImport] = useState(false);
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains' | 'profiles'>('matrix');
     const [isEditingName, setIsEditingName] = useState(false);
     const [editNameValue, setEditNameValue] = useState('');
@@ -183,6 +189,45 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
 
     const triggerCsvImport = () => {
         csvInputRef.current?.click();
+    };
+
+    const triggerPdfImport = () => {
+        pdfImportRef.current?.click();
+    };
+
+    const onPdfImportSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        e.target.value = '';
+        if (files.length === 0) return;
+
+        const items: PdfImportItem[] = files.map(f => ({ fileName: f.name, name: null, status: 'pending' }));
+        setPdfImportItems(items);
+        setShowPdfImport(true);
+
+        for (let i = 0; i < files.length; i++) {
+            setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'processing' } : it));
+            try {
+                const fd = new FormData();
+                fd.append('file', files[i]);
+                const res = await apiUpload('/api/gallup/parse', fd);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+
+                const name = `${data.person?.first_name || ''} ${data.person?.last_name || ''}`.trim() || files[i].name.replace('.pdf', '');
+                const talents = data.talents || [];
+
+                await apiFetch('/api/members', {
+                    method: 'POST',
+                    body: JSON.stringify({ name, teamId, talents }),
+                });
+
+                setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, name, status: 'success' } : it));
+            } catch (err) {
+                const msg = err instanceof Error ? err.message : 'Error';
+                setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'error', error: msg } : it));
+            }
+        }
+        fetchTeam();
     };
 
     const handleCsvImport = async (data: any[]) => {
@@ -370,6 +415,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         <div>
             <input ref={fileInputRef} type="file" accept=".pdf" style={{ display: 'none' }} onChange={onFileSelect} />
             <input ref={csvInputRef} type="file" accept=".csv" style={{ display: 'none' }} onChange={onCsvSelect} />
+            <input ref={pdfImportRef} type="file" accept=".pdf" multiple style={{ display: 'none' }} onChange={onPdfImportSelect} />
 
             <div className="page-header">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -410,6 +456,9 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                 <div style={{ display: 'flex', gap: 8 }}>
                     <button className="btn btn-ghost" onClick={triggerCsvImport}>
                         <Upload size={18} /> {t('import')}
+                    </button>
+                    <button className="btn btn-ghost" onClick={triggerPdfImport}>
+                        <Upload size={18} /> {locale === 'pl' ? 'Importuj raporty' : 'Import reports'}
                     </button>
                     <button className="btn btn-primary" onClick={() => setShowAddMember(true)}>
                         <UserPlus size={18} /> {t('add')}
@@ -993,6 +1042,77 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             {uploadStatus && (
                 <div className={`toast ${uploadStatus.includes(t('success')) ? 'success' : uploadStatus.includes(t('error')) ? 'error' : 'success'}`}>
                     {uploadStatus}
+                </div>
+            )}
+
+            {/* PDF Import modal */}
+            {showPdfImport && (
+                <div className="modal-overlay" onClick={() => { if (pdfImportItems.every(i => i.status !== 'processing')) setShowPdfImport(false); }}>
+                    <div className="modal-content" style={{ minWidth: 420, maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h2 className="modal-title" style={{ margin: 0 }}>
+                                {locale === 'pl' ? 'Importuj raporty Gallupa' : 'Import Gallup reports'}
+                            </h2>
+                            {pdfImportItems.every(i => i.status !== 'processing') && (
+                                <button className="btn btn-ghost" style={{ padding: 6 }} onClick={() => setShowPdfImport(false)}>
+                                    <X size={18} />
+                                </button>
+                            )}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                            {pdfImportItems.map((item, i) => (
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 12,
+                                    padding: '10px 14px', borderRadius: 8,
+                                    background: item.status === 'success' ? 'rgba(34,197,94,0.08)'
+                                        : item.status === 'error' ? 'rgba(239,68,68,0.08)'
+                                        : item.status === 'processing' ? 'rgba(139,92,246,0.08)'
+                                        : 'var(--bg-secondary)',
+                                }}>
+                                    <div style={{ fontSize: 18, width: 24, textAlign: 'center', flexShrink: 0 }}>
+                                        {item.status === 'success' ? '✓'
+                                            : item.status === 'error' ? '✗'
+                                            : item.status === 'processing' ? '⏳'
+                                            : '○'}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {item.name || item.fileName}
+                                        </div>
+                                        {item.name && item.name !== item.fileName && (
+                                            <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{item.fileName}</div>
+                                        )}
+                                        {item.error && (
+                                            <div style={{ fontSize: 11, color: 'var(--error)' }}>{item.error}</div>
+                                        )}
+                                    </div>
+                                    <div style={{ fontSize: 12, flexShrink: 0, color:
+                                        item.status === 'success' ? 'var(--success)'
+                                        : item.status === 'error' ? 'var(--error)'
+                                        : item.status === 'processing' ? 'var(--accent-primary)'
+                                        : 'var(--text-secondary)'
+                                    }}>
+                                        {item.status === 'success' ? (locale === 'pl' ? 'Dodano' : 'Added')
+                                            : item.status === 'error' ? (locale === 'pl' ? 'Błąd' : 'Error')
+                                            : item.status === 'processing' ? (locale === 'pl' ? 'Przetwarzanie...' : 'Processing...')
+                                            : (locale === 'pl' ? 'Oczekuje' : 'Pending')}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {pdfImportItems.every(i => i.status !== 'processing') && (
+                            <div style={{ marginTop: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                                    {pdfImportItems.filter(i => i.status === 'success').length}/{pdfImportItems.length} {locale === 'pl' ? 'zaimportowanych' : 'imported'}
+                                </span>
+                                <button className="btn btn-primary" onClick={() => setShowPdfImport(false)}>
+                                    {locale === 'pl' ? 'Zamknij' : 'Close'}
+                                </button>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
