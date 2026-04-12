@@ -8,7 +8,7 @@ import { teamTalentRanks, dominantDomain, teamDomainScores, findTeamWeaknesses, 
 import {
     Plus, Upload, ArrowLeft, Trash2, UserPlus, X,
     BarChart3, Grid3x3, PieChart, Edit2, Check,
-    ChevronDown, ExternalLink, Presentation, AlertTriangle, Star, TrendingDown, ShieldAlert
+    ChevronDown, ExternalLink, Presentation, AlertTriangle, Star, TrendingDown, ShieldAlert, Crown
 } from 'lucide-react';
 import {
     PieChart as RePieChart, Pie, Cell, ResponsiveContainer,
@@ -22,7 +22,7 @@ interface TalentResult {
     id: string; rank: number; talent: string; domain: string;
 }
 interface Member {
-    id: string; name: string; email?: string; role?: string;
+    id: string; name: string; email?: string; role?: string; isLeader?: boolean;
     results: TalentResult[];
 }
 interface TeamData {
@@ -115,6 +115,11 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const deleteMember = async (id: string) => {
         if (!confirm('Delete this member?')) return;
         await apiFetch(`/api/members/${id}`, { method: 'DELETE' });
+        fetchTeam();
+    };
+
+    const toggleLeader = async (id: string) => {
+        await apiFetch(`/api/members/${id}/set-leader`, { method: 'POST' });
         fetchTeam();
     };
 
@@ -929,9 +934,12 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                     </td>
                                     <td style={{ fontWeight: 500 }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }} className="member-name-row">
+                                            {member.isLeader && (
+                                                <Crown size={14} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                                            )}
                                             <span>{member.name}</span>
-                                            <button 
-                                                className="btn btn-ghost edit-member-icon" 
+                                            <button
+                                                className="btn btn-ghost edit-member-icon"
                                                 style={{ padding: 4, height: 'auto', minHeight: 0, opacity: 0, transition: 'opacity 0.2s' }}
                                                 onClick={() => setEditingMember({ id: member.id, name: member.name, email: member.email || '', role: member.role || '' })}
                                             >
@@ -950,7 +958,15 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                         )}
                                     </td>
                                     <td>
-                                        <div style={{ display: 'flex', gap: 8 }}>
+                                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                            <button
+                                                className="btn btn-ghost"
+                                                style={{ padding: '4px 8px', color: member.isLeader ? '#f59e0b' : undefined }}
+                                                title={member.isLeader ? (locale === 'pl' ? 'Usuń lidera' : 'Remove leader') : (locale === 'pl' ? 'Ustaw jako lidera' : 'Set as leader')}
+                                                onClick={() => toggleLeader(member.id)}
+                                            >
+                                                <Crown size={14} />
+                                            </button>
                                             <button className="btn btn-ghost" style={{ padding: '4px 10px', fontSize: 12 }}
                                                 onClick={() => triggerUpload(member.id)}>
                                                 <Upload size={14} /> {t('uploadGallup')}
