@@ -66,6 +66,8 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [editingMember, setEditingMember] = useState<{ id: string, name: string, email: string, role: string } | null>(null);
     const [editingTalent, setEditingTalent] = useState<{ memberId: string, talentCode: string, currentRank?: number | null, domain: string } | null>(null);
     const [talentRankInput, setTalentRankInput] = useState('');
+    const [matrixSearch, setMatrixSearch] = useState('');
+    const [membersSearch, setMembersSearch] = useState('');
 
     const fetchTeam = useCallback(async () => {
         try {
@@ -342,6 +344,16 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
 
     const membersWithResults = team.members.filter(m => m.results.length > 0);
 
+    const matrixQ = matrixSearch.trim().toLowerCase();
+    const filteredMembersForMatrix = matrixQ
+        ? membersWithResults.filter(m => m.name.toLowerCase().includes(matrixQ))
+        : membersWithResults;
+
+    const membersQ = membersSearch.trim().toLowerCase();
+    const filteredMembers = membersQ
+        ? team.members.filter(m => m.name.toLowerCase().includes(membersQ))
+        : team.members;
+
     // Build rank maps for team algorithm
     const talentCodes = GALLUP_TALENTS.map(t => t.code);
     const membersRankMaps = membersWithResults.map(m => {
@@ -471,7 +483,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             </div>
 
             {/* Tab navigation */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 24, alignItems: 'center', flexWrap: 'wrap' }}>
                 {[
                     { key: 'matrix' as const, icon: Grid3x3, label: tt('matrix') },
                     { key: 'domains' as const, icon: PieChart, label: tt('domains') },
@@ -485,6 +497,15 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                         <Icon size={16} /> {label}
                     </button>
                 ))}
+                {activeTab === 'matrix' && (
+                    <input
+                        className="input"
+                        style={{ marginLeft: 'auto', width: 220, fontSize: 13, padding: '6px 12px', height: 'auto' }}
+                        placeholder={locale === 'pl' ? 'Szukaj osoby...' : 'Search person...'}
+                        value={matrixSearch}
+                        onChange={e => setMatrixSearch(e.target.value)}
+                    />
+                )}
             </div>
 
             {/* Tab content */}
@@ -516,7 +537,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {membersWithResults.map(member => {
+                                    {filteredMembersForMatrix.map(member => {
                                         const rankMap: Record<string, number> = {};
                                         member.results.forEach(r => { rankMap[r.talent] = r.rank; });
                                         return (
@@ -945,7 +966,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                     <ChevronDown size={20} className={`collapsible-chevron ${membersExpanded ? 'open' : ''}`} />
                 </div>
                 <div className={`collapsible-body ${membersExpanded ? 'open' : ''}`}>
-                    {/* Select all / Deselect all */}
+                    {/* Select all / Search */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                         <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: 12 }}
                             onClick={toggleSelectAll}>
@@ -954,6 +975,13 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                                 : tp('selectAll')
                             }
                         </button>
+                        <input
+                            className="input"
+                            style={{ width: 220, fontSize: 13, padding: '4px 12px', height: 'auto' }}
+                            placeholder={locale === 'pl' ? 'Szukaj osoby...' : 'Search person...'}
+                            value={membersSearch}
+                            onChange={e => setMembersSearch(e.target.value)}
+                        />
                     </div>
                     <table className="data-table">
                         <thead>
@@ -974,7 +1002,7 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                             </tr>
                         </thead>
                         <tbody>
-                            {team.members.map(member => (
+                            {filteredMembers.map(member => (
                                 <tr key={member.id}>
                                     <td style={{ textAlign: 'center' }}>
                                         {member.results.length > 0 && (
