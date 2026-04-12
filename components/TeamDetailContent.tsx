@@ -62,10 +62,15 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [talentRankInput, setTalentRankInput] = useState('');
 
     const fetchTeam = useCallback(async () => {
-        const res = await apiFetch(`/api/teams/${teamId}`);
-        const data = await res.json();
-        setTeam(data);
-        setLoading(false);
+        try {
+            const res = await apiFetch(`/api/teams/${teamId}`);
+            const data = await res.json();
+            setTeam(data);
+        } catch {
+            // ignore — auth errors redirect via logout()
+        } finally {
+            setLoading(false);
+        }
     }, [apiFetch, teamId]);
 
     useEffect(() => { fetchTeam(); }, []);
