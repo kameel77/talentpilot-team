@@ -986,11 +986,27 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                             )}
                         </span>
                     </h3>
-                    <ChevronDown size={20} className={`collapsible-chevron ${membersExpanded ? 'open' : ''}`} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {selectedMembers.size > 0 && (
+                            <button
+                                className="btn btn-primary"
+                                style={{ padding: '4px 14px', fontSize: 12 }}
+                                onClick={e => { e.stopPropagation(); provisionUsers(); }}
+                                disabled={provisionLoading}
+                            >
+                                <UserPlus size={14} />
+                                {provisionLoading
+                                    ? (locale === 'pl' ? 'Tworzenie...' : 'Provisioning...')
+                                    : (locale === 'pl' ? `Utwórz konta (${selectedMembers.size})` : `Create accounts (${selectedMembers.size})`)
+                                }
+                            </button>
+                        )}
+                        <ChevronDown size={20} className={`collapsible-chevron ${membersExpanded ? 'open' : ''}`} />
+                    </div>
                 </div>
                 <div className={`collapsible-body ${membersExpanded ? 'open' : ''}`}>
-                    {/* Select all / Search / Provision */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+                    {/* Select all / Search */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                         <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: 12 }}
                             onClick={toggleSelectAll}>
                             {selectedMembers.size === team.members.filter(m => m.results.length > 0).length
@@ -1005,20 +1021,6 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                             value={membersSearch}
                             onChange={e => setMembersSearch(e.target.value)}
                         />
-                        {selectedMembers.size > 0 && (
-                            <button
-                                className="btn btn-primary"
-                                style={{ marginLeft: 'auto', padding: '4px 14px', fontSize: 12 }}
-                                onClick={provisionUsers}
-                                disabled={provisionLoading}
-                            >
-                                <UserPlus size={14} />
-                                {provisionLoading
-                                    ? (locale === 'pl' ? 'Tworzenie...' : 'Provisioning...')
-                                    : (locale === 'pl' ? `Utwórz konta (${selectedMembers.size})` : `Create accounts (${selectedMembers.size})`)
-                                }
-                            </button>
-                        )}
                     </div>
                     <table className="data-table">
                         <thead>
