@@ -69,6 +69,11 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const [matrixSearch, setMatrixSearch] = useState('');
     const [membersSearch, setMembersSearch] = useState('');
 
+    type ProvisionResult = { email: string; full_name: string; status: string; user_id?: number; error?: string };
+    type ProvisionSkipped = { name: string; reason: string };
+    const [provisionLoading, setProvisionLoading] = useState(false);
+    const [provisionResult, setProvisionResult] = useState<{ results: ProvisionResult[]; skipped: ProvisionSkipped[]; created: number; existing: number; errors: number } | null>(null);
+
     const fetchTeam = useCallback(async () => {
         try {
             const res = await apiFetch(`/api/teams/${teamId}`);
@@ -134,6 +139,24 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
     const toggleLeader = async (id: string) => {
         await apiFetch(`/api/members/${id}/set-leader`, { method: 'POST' });
         fetchTeam();
+    };
+
+    const provisionUsers = async () => {
+        if (selectedMembers.size === 0) return;
+        setProvisionLoading(true);
+        setProvisionResult(null);
+        try {
+            const res = await apiFetch('/api/provision-users', {
+                method: 'POST',
+                body: JSON.stringify({ teamId, memberIds: Array.from(selectedMembers) }),
+            });
+            const data = await res.json();
+            setProvisionResult(data);
+        } catch {
+            setProvisionResult(null);
+        } finally {
+            setProvisionLoading(false);
+        }
     };
 
     const handleEditMemberSubmit = async (e: React.FormEvent) => {
@@ -966,8 +989,8 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                     <ChevronDown size={20} className={`collapsible-chevron ${membersExpanded ? 'open' : ''}`} />
                 </div>
                 <div className={`collapsible-body ${membersExpanded ? 'open' : ''}`}>
-                    {/* Select all / Search */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+                    {/* Select all / Search / Provision */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
                         <button className="btn btn-ghost" style={{ padding: '4px 12px', fontSize: 12 }}
                             onClick={toggleSelectAll}>
                             {selectedMembers.size === team.members.filter(m => m.results.length > 0).length
@@ -982,6 +1005,20 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                             value={membersSearch}
                             onChange={e => setMembersSearch(e.target.value)}
                         />
+                        {selectedMembers.size > 0 && (
+                            <button
+                                className="btn btn-primary"
+                                style={{ marginLeft: 'auto', padding: '4px 14px', fontSize: 12 }}
+                                onClick={provisionUsers}
+                                disabled={provisionLoading}
+                            >
+                                <UserPlus size={14} />
+                                {provisionLoading
+                                    ? (locale === 'pl' ? 'Tworzenie...' : 'Provisioning...')
+                                    : (locale === 'pl' ? `Utwórz konta (${selectedMembers.size})` : `Create accounts (${selectedMembers.size})`)
+                                }
+                            </button>
+                        )}
                     </div>
                     <table className="data-table">
                         <thead>
@@ -1070,6 +1107,84 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
             {uploadStatus && (
                 <div className={`toast ${uploadStatus.includes(t('success')) ? 'success' : uploadStatus.includes(t('error')) ? 'error' : 'success'}`}>
                     {uploadStatus}
+                </div>
+            )}
+
+            {/* Provision result modal */}
+            {provisionResult && (
+                <div className="modal-overlay" onClick={() => setProvisionResult(null)}>
+                    <div className="modal-content" style={{ minWidth: 440, maxWidth: 580 }} onClick={e => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                            <h2 className="modal-title" style={{ margin: 0 }}>
+                                {locale === 'pl' ? 'Wyniki tworzenia kont' : 'Account provisioning results'}
+                            </h2>
+                            <button className="btn btn-ghost" style={{ padding: 6 }} onClick={() => setProvisionResult(null)}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+                            {[
+                                { label: locale === 'pl' ? 'Utworzono' : 'Created', value: provisionResult.created, color: 'var(--success)' },
+                                { label: locale === 'pl' ? 'Już istnieje' : 'Existing', value: provisionResult.existing, color: 'var(--accent-primary)' },
+                                { label: locale === 'pl' ? 'Błędy' : 'Errors', value: provisionResult.errors, color: 'var(--error)' },
+                            ].map(stat => (
+                                <div key={stat.label} style={{ flex: 1, textAlign: 'center', padding: '12px 8px', background: 'var(--bg-secondary)', borderRadius: 8 }}>
+                                    <div style={{ fontSize: 24, fontWeight: 700, color: stat.color }}>{stat.value}</div>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 2 }}>{stat.label}</div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 320, overflowY: 'auto' }}>
+                            {provisionResult.results.map((r, i) => (
+                                <div key={i} style={{
+                                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px',
+                                    borderRadius: 6,
+                                    background: r.status === 'created' ? 'rgba(34,197,94,0.07)'
+                                        : r.status === 'error' ? 'rgba(239,68,68,0.07)'
+                                        : 'var(--bg-secondary)',
+                                }}>
+                                    <span style={{ fontSize: 16, flexShrink: 0 }}>
+                                        {r.status === 'created' ? '✓' : r.status === 'error' ? '✗' : '→'}
+                                    </span>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontSize: 13, fontWeight: 500 }}>{r.full_name}</div>
+                                        <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{r.email}</div>
+                                        {r.error && <div style={{ fontSize: 11, color: 'var(--error)' }}>{r.error}</div>}
+                                    </div>
+                                    <span style={{ fontSize: 11, flexShrink: 0, color:
+                                        r.status === 'created' ? 'var(--success)'
+                                        : r.status === 'error' ? 'var(--error)'
+                                        : 'var(--text-secondary)'
+                                    }}>
+                                        {r.status === 'created' ? (locale === 'pl' ? 'Utworzono' : 'Created')
+                                            : r.status === 'error' ? (locale === 'pl' ? 'Błąd' : 'Error')
+                                            : (locale === 'pl' ? 'Już istnieje' : 'Existing')}
+                                    </span>
+                                </div>
+                            ))}
+                            {provisionResult.skipped?.length > 0 && (
+                                <>
+                                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8, marginBottom: 4 }}>
+                                        {locale === 'pl' ? 'Pominięto (brak emaila):' : 'Skipped (no email):'}
+                                    </div>
+                                    {provisionResult.skipped.map((s, i) => (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderRadius: 6, background: 'var(--bg-secondary)', opacity: 0.7 }}>
+                                            <span style={{ fontSize: 13 }}>—</span>
+                                            <span style={{ fontSize: 13 }}>{s.name}</span>
+                                        </div>
+                                    ))}
+                                </>
+                            )}
+                        </div>
+
+                        <div style={{ marginTop: 20, textAlign: 'right' }}>
+                            <button className="btn btn-primary" onClick={() => setProvisionResult(null)}>
+                                {locale === 'pl' ? 'Zamknij' : 'Close'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
 

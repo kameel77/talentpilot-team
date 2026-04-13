@@ -16,25 +16,27 @@ model Admin {
 }
 
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  address   String?
-  nip       String?  @unique
-  email     String?
-  teams     Team[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  address          String?
+  nip              String?  @unique
+  email            String?
+  talentpilotOrgId Int?
+  teams            Team[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model Team {
-  id                 String       @id @default(cuid())
-  name               String
-  presentationToken  String?      @unique
-  organizationId     String
-  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  members            Member[]
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  name                String
+  presentationToken   String?      @unique
+  talentpilotTeamId   Int?
+  organizationId      String
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members             Member[]
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 }
 
 model Member {
