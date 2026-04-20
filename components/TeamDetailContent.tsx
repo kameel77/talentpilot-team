@@ -343,6 +343,30 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
         }
     };
 
+    const exportToTalentPilot = async () => {
+        if (!confirm(locale === 'pl' ? 'Eksportować zespół i członków (z adresem e-mail) do aplikacji TalentPilot?' : 'Export team and members (with email) to TalentPilot app?')) return;
+        try {
+            setUploadStatus(t('processing'));
+            const res = await apiFetch('/api/talentpilot/export', {
+                method: 'POST',
+                body: JSON.stringify({ teamId })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                alert(locale === 'pl' ? 'Pomyślnie wyeksportowano!' : 'Successfully exported!');
+                setUploadStatus(locale === 'pl' ? 'Pomyślnie wyeksportowano.' : 'Successfully exported.');
+                fetchTeam();
+            } else {
+                setUploadStatus(`${t('error')}: ${data.error || 'Unknown Error'}`);
+                alert(`${t('error')}: ${data.error || 'Unknown Error'}`);
+            }
+        } catch (err: any) {
+            setUploadStatus(t('error'));
+            alert(err.message || 'Error');
+        }
+        setTimeout(() => setUploadStatus(null), 3000);
+    };
+
     const toggleMemberSelection = (id: string) => {
         setSelectedMembers(prev => {
             const next = new Set(prev);
@@ -497,6 +521,10 @@ export default function TeamDetailContent({ teamId }: { teamId: string }) {
                     </button>
                     <button className="btn btn-primary" onClick={() => setShowAddMember(true)}>
                         <UserPlus size={18} /> {t('add')}
+                    </button>
+                    <button className="btn btn-primary" onClick={exportToTalentPilot}
+                        style={{ background: `linear-gradient(135deg, ${getDomainStyle('influencing')}, ${getDomainStyle('executing')})` }}>
+                        <ExternalLink size={18} /> {locale === 'pl' ? 'Eksport do aplikacji' : 'Export to app'}
                     </button>
                     <button className="btn btn-primary" onClick={openPresentation}
                         style={{ background: `linear-gradient(135deg, ${getDomainStyle('relationship_building')}, ${getDomainStyle('strategic_thinking')})` }}>
