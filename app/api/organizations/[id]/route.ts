@@ -33,12 +33,28 @@ export async function PUT(req: NextRequest, { params }: Params) {
     const { id } = await params;
 
     const body = await req.json();
-    const org = await prisma.organization.update({
-        where: { id },
-        data: body,
-    });
+    let { name, address, nip, email } = body;
 
-    return NextResponse.json(org);
+    nip = nip?.trim() || null;
+    address = address?.trim() || null;
+    email = email?.trim() || null;
+
+    try {
+        const org = await prisma.organization.update({
+            where: { id },
+            data: { name, address, nip, email },
+        });
+
+        return NextResponse.json(org);
+    } catch (error: any) {
+        if (error.code === 'P2002') {
+            return NextResponse.json(
+                { error: 'Organization with this NIP already exists.' },
+                { status: 409 }
+            );
+        }
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
 }
 
 // DELETE /api/organizations/[id]

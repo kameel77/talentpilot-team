@@ -48,13 +48,26 @@ export default function OrganizationsContent() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (editOrg) {
-            await apiFetch(`/api/organizations/${editOrg.id}`, { method: 'PUT', body: JSON.stringify(form) });
-        } else {
-            await apiFetch('/api/organizations', { method: 'POST', body: JSON.stringify(form) });
+        try {
+            let res;
+            if (editOrg) {
+                res = await apiFetch(`/api/organizations/${editOrg.id}`, { method: 'PUT', body: JSON.stringify(form) });
+            } else {
+                res = await apiFetch('/api/organizations', { method: 'POST', body: JSON.stringify(form) });
+            }
+
+            if (!res.ok) {
+                const data = await res.json();
+                alert(data.error || 'Something went wrong while saving the organization.');
+                return;
+            }
+
+            setShowModal(false);
+            fetchOrgs();
+        } catch (error) {
+            console.error('Error saving organization:', error);
+            alert('An unexpected error occurred. Please try again later.');
         }
-        setShowModal(false);
-        fetchOrgs();
     };
 
     const handleDelete = async (id: string) => {

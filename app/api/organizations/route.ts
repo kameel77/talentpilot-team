@@ -21,15 +21,29 @@ export async function POST(req: NextRequest) {
     if (!user) return unauthorized();
 
     const body = await req.json();
-    const { name, address, nip, email } = body;
+    let { name, address, nip, email } = body;
 
     if (!name) {
         return NextResponse.json({ error: 'Name is required' }, { status: 400 });
     }
 
-    const org = await prisma.organization.create({
-        data: { name, address, nip, email },
-    });
+    nip = nip?.trim() || null;
+    address = address?.trim() || null;
+    email = email?.trim() || null;
 
-    return NextResponse.json(org, { status: 201 });
+    try {
+        const org = await prisma.organization.create({
+            data: { name, address, nip, email },
+        });
+
+        return NextResponse.json(org, { status: 201 });
+    } catch (error: any) {
+        if (error.code === 'P2002') {
+            return NextResponse.json(
+                { error: 'Organization with this NIP already exists.' }, 
+                { status: 409 }
+            );
+        }
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
 }
